@@ -1,0 +1,26 @@
+[
+    {
+        "merged": "C:\\Users\\Zain Enterprises\\.gradle\\daemon\\8.2\\com.example.officetracker.app-merged_res-67:\\mipmap-anydpi-v26_ic_launcher_round.xml.flat",
+        "source": "C:\\Users\\Zain Enterprises\\.gradle\\daemon\\8.2\\com.example.officetracker.app-main-69:\\mipmap-anydpi-v26\\ic_launcher_round.xml"
+    },
+    {
+        "merged": "C:\\Users\\Zain Enterprises\\.gradle\\daemon\\8.2\\com.example.officetracker.app-merged_res-67:\\mipmap-anydpi-v26_ic_launcher.xml.flat",
+        "source": "C:\\Users\\Zain Enterprises\\.gradle\\daemon\\8.2\\com.example.officetracker.app-main-69:\\mipmap-anydpi-v26\\ic_launcher.xml"
+    },
+    {
+        "merged": "com.example.officetracker.app-merged_res-67:/drawable_ic_launcher_foreground.xml.flat",
+        "source": "com.example.officetracker.app-main-69:/drawable/ic_launcher_foreground.xml"
+    },
+    {
+        "merged": "C:\\Users\\Zain Enterprises\\.gradle\\daemon\\8.2\\com.example.officetracker.app-merged_res-67:\\drawable_ic_launcher_foreground.xml.flat",
+        "source": "C:\\Users\\Zain Enterprises\\.gradle\\daemon\\8.2\\com.example.officetracker.app-main-69:\\drawable\\ic_launcher_foreground.xml"
+    },
+    {
+        "merged": "C:\\Users\\Zain Enterprises\\.gradle\\daemon\\8.2\\com.example.officetracker.app-merged_res-67:\\xml_data_extraction_rules.xml.flat",
+        "source": "C:\\Users\\Zain Enterprises\\.gradle\\daemon\\8.2\\com.example.officetracker.app-main-69:\\xml\\data_extraction_rules.xml"
+    },
+    {
+        "merged": "C:\\Users\\Zain Enterprises\\.gradle\\daemon\\8.2\\com.example.officetracker.app-merged_res-67:\\xml_backup_rules.xml.flat",
+        "source": "C:\\Users\\Zain Enterprises\\.gradle\\daemon\\8.2\\com.example.officetracker.app-main-69:\\xml\\backup_rules.xml"
+    }
+]

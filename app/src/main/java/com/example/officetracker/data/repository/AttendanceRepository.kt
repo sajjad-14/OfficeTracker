@@ -65,6 +65,18 @@ class AttendanceRepository @Inject constructor(
         attendanceDao.insertSession(session)
     }
 
+    suspend fun addPastSession(startTime: Long, endTime: Long) {
+        val date = getStartOfDay(startTime)
+        val session = AttendanceSession(
+            date = date,
+            startTime = startTime,
+            endTime = endTime,
+            isManual = true
+        )
+        attendanceDao.insertSession(session)
+        recalculateDailyStats(date)
+    }
+
     suspend fun checkOut() {
         val active = attendanceDao.getCurrentActiveSession() ?: return
         val now = System.currentTimeMillis()

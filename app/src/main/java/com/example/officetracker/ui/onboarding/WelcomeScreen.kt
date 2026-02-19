@@ -1,7 +1,10 @@
 package com.example.officetracker.ui.onboarding
 
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Column
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Person
+import androidx.compose.material3.Icon
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.height
@@ -32,22 +35,43 @@ fun WelcomeScreen(
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .padding(24.dp),
+            .padding(32.dp),
         verticalArrangement = Arrangement.Center,
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        Text(
-            text = "Welcome to Office Tracker!",
-            style = MaterialTheme.typography.headlineMedium,
-            textAlign = TextAlign.Center
+        // Welcome Icon
+        Icon(
+            imageVector = androidx.compose.material.icons.Icons.Default.Person,
+            contentDescription = null,
+            modifier = Modifier
+                .size(120.dp)
+                .padding(bottom = 24.dp)
+                .background(
+                    color = MaterialTheme.colorScheme.secondaryContainer,
+                    shape = androidx.compose.foundation.shape.CircleShape
+                )
+                .padding(24.dp),
+            tint = MaterialTheme.colorScheme.onSecondaryContainer
         )
+
+        Text(
+            text = "Welcome!",
+            style = MaterialTheme.typography.headlineLarge,
+            textAlign = TextAlign.Center,
+            fontWeight = androidx.compose.ui.text.font.FontWeight.Bold,
+            color = MaterialTheme.colorScheme.primary
+        )
+        
         Spacer(modifier = Modifier.height(8.dp))
+        
         Text(
-            text = "Let's get to know you.",
+            text = "Office Tracker helps you stay disciplined and master your schedule.",
             style = MaterialTheme.typography.bodyLarge,
-            textAlign = TextAlign.Center
+            textAlign = TextAlign.Center,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
         )
-        Spacer(modifier = Modifier.height(32.dp))
+        
+        Spacer(modifier = Modifier.height(48.dp))
 
         OutlinedTextField(
             value = name,
@@ -55,21 +79,23 @@ fun WelcomeScreen(
                 name = it
                 if (it.isNotBlank()) isError = false
             },
-            label = { Text("What's your name?") },
+            label = { Text("What should we call you?") },
             singleLine = true,
             isError = isError,
-            modifier = Modifier.fillMaxSize().weight(1f, false)
+            modifier = Modifier.fillMaxWidth(),
+            shape = androidx.compose.foundation.shape.RoundedCornerShape(12.dp)
         )
+        
         if (isError) {
             Text(
                 text = "Please enter your name",
                 color = MaterialTheme.colorScheme.error,
                 style = MaterialTheme.typography.bodySmall,
-                modifier = Modifier.padding(start = 16.dp, top = 4.dp)
+                modifier = Modifier.padding(start = 16.dp, top = 4.dp).align(Alignment.Start)
             )
         }
 
-        Spacer(modifier = Modifier.height(32.dp))
+        Spacer(modifier = Modifier.weight(1f))
 
         Button(
             onClick = {
@@ -80,9 +106,12 @@ fun WelcomeScreen(
                     onNext()
                 }
             },
-            modifier = Modifier.fillMaxSize().weight(1f, false)
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(56.dp),
+            shape = androidx.compose.foundation.shape.RoundedCornerShape(12.dp)
         ) {
-            Text("Next")
+            Text("Continue", style = MaterialTheme.typography.titleMedium)
         }
     }
 }

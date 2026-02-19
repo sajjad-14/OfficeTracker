@@ -1,6 +1,15 @@
 package com.example.officetracker.ui.dashboard
 
 import androidx.compose.animation.core.*
+import androidx.compose.ui.draw.scale
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.List
+import androidx.compose.material.icons.filled.Refresh
+import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material.icons.filled.ExitToApp
+import androidx.compose.material.icons.filled.Person
+import java.util.Calendar
 import androidx.compose.foundation.clickable
 import androidx.compose.ui.draw.clip
 import androidx.compose.foundation.Canvas
@@ -111,12 +120,10 @@ fun DashboardScreen(
     val disciplineScore by viewModel.disciplineScore.collectAsState()
     val currentSessionDuration by viewModel.currentSessionDuration
     val userName by viewModel.userName.collectAsState()
-
     
-    // Caps
     val userGoals by viewModel.userGoals.collectAsState()
 
-    // Calculate totals including current session if active
+    // Calculate totals
     val sessionSeconds = if (activeSession != null) currentSessionDuration else 0L
     val recordedDailySeconds = todayStats?.totalSeconds ?: 0L
     val totalDailyRealSeconds = recordedDailySeconds + sessionSeconds
@@ -125,277 +132,348 @@ fun DashboardScreen(
     val dailyGoalSeconds = userGoals.dailyGoalHours * 3600L
     val monthlyGoalSeconds = userGoals.monthlyGoalHours * 3600L
     
-    // Caps (Display progress towards Goal, capped at Goal for visual cleanliness 0-100%, or show overachievement?)
-    // Let's cap visual progress at 100%.
     val dailyProgress = (totalDailyRealSeconds.toFloat() / dailyGoalSeconds.toFloat()).coerceIn(0f, 1f)
-    
     val monthlyProgress = (monthlySeconds + totalDailyRealSeconds).toFloat() / monthlyGoalSeconds.toFloat()
 
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(MaterialTheme.colorScheme.background)
-    ) {
-        // Profile Header
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(16.dp),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Column {
-                Text(
-                    text = "Hi, $userName",
-                    style = MaterialTheme.typography.headlineMedium,
-                    fontWeight = FontWeight.Bold,
-                    color = MaterialTheme.colorScheme.onBackground
-                )
-                Text(
-                    text = "Ready to be productive?",
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-            }
-            
-            // Profile Icon
-            val initial = if (userName.isNotEmpty()) userName.first().toString().uppercase() else "U"
-            var showMenu by remember { mutableStateOf(false) }
-            var showEditDialog by remember { mutableStateOf(false) }
+    val drawerState = rememberDrawerState(initialValue = DrawerValue.Closed)
+    val scope = rememberCoroutineScope()
+    var showEditDialog by remember { mutableStateOf(false) }
 
-            Box(
-                modifier = Modifier
-                    .size(48.dp)
-                    .clip(CircleShape)
-                    .background(MaterialTheme.colorScheme.primaryContainer)
-                    .clickable { showMenu = true },
-                contentAlignment = Alignment.Center
-            ) {
-                Text(
-                    text = initial,
-                    style = MaterialTheme.typography.titleLarge,
-                    fontWeight = FontWeight.Bold,
-                    color = MaterialTheme.colorScheme.onPrimaryContainer
-                )
-
-                DropdownMenu(
-                    expanded = showMenu,
-                    onDismissRequest = { showMenu = false }
+    ModalNavigationDrawer(
+        drawerState = drawerState,
+        drawerContent = {
+            ModalDrawerSheet {
+                Spacer(modifier = Modifier.height(24.dp))
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(24.dp)
                 ) {
-                    DropdownMenuItem(
-                        text = { Text("Edit Profile") },
-                        onClick = {
-                            showMenu = false
-                            showEditDialog = true
-                        }
-                    )
-                    DropdownMenuItem(
-                        text = { Text("Settings") },
-                        onClick = {
-                            showMenu = false
-                            onNavigateToProfile() // Reusing existing callback which maps to Settings
-                        }
-                    )
-                    Divider()
-                    DropdownMenuItem(
-                        text = { Text("Log Out", color = MaterialTheme.colorScheme.error) },
-                        onClick = {
-                            showMenu = false
-                            viewModel.logOut()
-                        }
-                    )
-                }
-            }
-
-            if (showEditDialog) {
-                var newName by remember { mutableStateOf(userName) }
-                AlertDialog(
-                    onDismissRequest = { showEditDialog = false },
-                    title = { Text("Edit Profile") },
-                    text = {
-                        OutlinedTextField(
-                            value = newName,
-                            onValueChange = { newName = it },
-                            label = { Text("Name") },
-                            singleLine = true
+                    Box(
+                        modifier = Modifier
+                            .size(64.dp)
+                            .clip(CircleShape)
+                            .background(MaterialTheme.colorScheme.primaryContainer),
+                        contentAlignment = Alignment.Center
+                    ) {
+                         Text(
+                            text = if (userName.isNotEmpty()) userName.first().toString().uppercase() else "U",
+                            style = MaterialTheme.typography.headlineMedium,
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.onPrimaryContainer
                         )
-                    },
-                    confirmButton = {
-                        TextButton(
-                            onClick = {
-                                if (newName.isNotBlank()) {
-                                    viewModel.updateUserName(newName)
-                                    showEditDialog = false
-                                }
-                            }
-                        ) {
-                            Text("Save")
-                        }
-                    },
-                    dismissButton = {
-                        TextButton(onClick = { showEditDialog = false }) {
-                            Text("Cancel")
-                        }
                     }
-                )
-            }
-        }
-
-        // Scrollable Content
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .weight(1f)
-                .verticalScroll(rememberScrollState())
-                .padding(horizontal = 16.dp),
-            horizontalAlignment = Alignment.CenterHorizontally
-        ) {
-            Spacer(modifier = Modifier.height(16.dp))
-            
-            // Circular Progress for Daily
-            Box(contentAlignment = Alignment.Center) {
-                val progressColor = if (totalDailyRealSeconds >= dailyGoalSeconds) 
-                    MaterialTheme.colorScheme.primary 
-                else 
-                    MaterialTheme.colorScheme.tertiary // Blueish until goal met
-
-                CircularProgress(
-                    progress = dailyProgress, 
-                    color = progressColor,
-                    size = 220.dp
-                )
-                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                    Spacer(modifier = Modifier.height(16.dp))
                     Text(
-                        text = formatSeconds(totalDailyRealSeconds),
-                        style = MaterialTheme.typography.headlineLarge,
+                        text = userName,
+                        style = MaterialTheme.typography.titleLarge,
                         fontWeight = FontWeight.Bold,
-                        color = MaterialTheme.colorScheme.onBackground
+                        color = MaterialTheme.colorScheme.onSurface
                     )
                     Text(
-                        text = "/ ${userGoals.dailyGoalHours}h Goal",
+                        text = "Self-Discipline Warrior",
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
+                Divider()
+                NavigationDrawerItem(
+                    label = { Text("Edit Profile") },
+                    selected = false,
+                    onClick = {
+                        scope.launch { drawerState.close() }
+                        showEditDialog = true
+                    },
+                    icon = { Icon(Icons.Default.Edit, null) },
+                    modifier = Modifier.padding(NavigationDrawerItemDefaults.ItemPadding)
+                )
+                NavigationDrawerItem(
+                    label = { Text("Settings") },
+                    selected = false,
+                    onClick = {
+                        scope.launch { drawerState.close() }
+                        onNavigateToProfile()
+                    },
+                    icon = { Icon(Icons.Default.Settings, null) },
+                    modifier = Modifier.padding(NavigationDrawerItemDefaults.ItemPadding)
+                )
+                Spacer(modifier = Modifier.weight(1f))
+                Divider()
+                NavigationDrawerItem(
+                    label = { Text("Log Out") },
+                    selected = false,
+                    onClick = {
+                        scope.launch { drawerState.close() }
+                        viewModel.logOut()
+                    },
+                    icon = { Icon(Icons.Default.ExitToApp, null) },
+                    modifier = Modifier.padding(NavigationDrawerItemDefaults.ItemPadding)
+                )
+                Spacer(modifier = Modifier.height(24.dp))
             }
-
-            Spacer(modifier = Modifier.height(32.dp))
-
-            // Status Card
-            Card(
-                colors = CardDefaults.cardColors(
-                    containerColor = MaterialTheme.colorScheme.surfaceVariant
-                ),
-                modifier = Modifier.fillMaxWidth(),
-                elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
+        }
+    ) {
+        Scaffold { paddingValues ->
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .background(MaterialTheme.colorScheme.background)
+                    .padding(paddingValues)
             ) {
+                // Profile Header
                 Row(
-                    modifier = Modifier.padding(20.dp).fillMaxWidth(),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(16.dp),
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Column {
-                        Text("STATUS", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                        Spacer(modifier = Modifier.height(4.dp))
+                        // Dynamic Greeting
+                        val currentHour = remember { java.util.Calendar.getInstance().get(java.util.Calendar.HOUR_OF_DAY) }
+                        val greeting = when (currentHour) {
+                            in 5..11 -> "Good Morning"
+                            in 12..16 -> "Good Afternoon"
+                            in 17..20 -> "Good Evening"
+                            else -> "Hello"
+                        }
                         
-                        val statusText = if (activeSession != null) "IN OFFICE" else "OUT OF OFFICE"
-                        val statusColor = if (activeSession != null) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.error
-                        
-                        // Pulse Effect for IN OFFICE
-                        val infiniteTransition = rememberInfiniteTransition()
-                        val alpha by infiniteTransition.animateFloat(
-                            initialValue = 1f,
-                            targetValue = if (activeSession != null) 0.5f else 1f,
-                            animationSpec = infiniteRepeatable(
-                                animation = tween(1000, easing = LinearEasing),
-                                repeatMode = RepeatMode.Reverse
-                            ), label = "pulse"
-                        )
-
                         Text(
-                            text = statusText,
-                            style = MaterialTheme.typography.titleLarge,
-                            color = statusColor.copy(alpha = if (activeSession != null) alpha else 1f),
-                            fontWeight = FontWeight.Bold
+                            text = "$greeting, $userName",
+                            style = MaterialTheme.typography.headlineMedium,
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.onBackground
+                        )
+                        Text(
+                            text = "Ready to be productive?",
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                     }
                     
-                    Button(
-                        onClick = {
-                            if (activeSession != null) viewModel.checkOutManual() else viewModel.checkInManual()
-                        },
-                        colors = ButtonDefaults.buttonColors(
-                            containerColor = if (activeSession != null) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.primary,
-                            contentColor = if (activeSession != null) MaterialTheme.colorScheme.onError else MaterialTheme.colorScheme.onPrimary
-                        )
+                    // Profile Icon (Triggers Drawer)
+                    val initial = if (userName.isNotEmpty()) userName.first().toString().uppercase() else "U"
+
+                    Box(
+                        modifier = Modifier
+                            .size(48.dp)
+                            .clip(CircleShape)
+                            .background(MaterialTheme.colorScheme.primaryContainer)
+                            .clickable {
+                                scope.launch { drawerState.open() }
+                            },
+                        contentAlignment = Alignment.Center
                     ) {
-                        Text(if (activeSession != null) "Check Out" else "Check In")
+                        Text(
+                            text = initial,
+                            style = MaterialTheme.typography.titleLarge,
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.onPrimaryContainer
+                        )
                     }
                 }
-            }
 
-            Spacer(modifier = Modifier.height(24.dp))
+                if (showEditDialog) {
+                    var newName by remember { mutableStateOf(userName) }
+                    AlertDialog(
+                        onDismissRequest = { showEditDialog = false },
+                        title = { Text("Edit Profile") },
+                        text = {
+                            OutlinedTextField(
+                                value = newName,
+                                onValueChange = { newName = it },
+                                label = { Text("Name") },
+                                singleLine = true
+                            )
+                        },
+                        confirmButton = {
+                            TextButton(
+                                onClick = {
+                                    if (newName.isNotBlank()) {
+                                        viewModel.updateUserName(newName)
+                                        showEditDialog = false
+                                    }
+                                }
+                            ) {
+                                Text("Save")
+                            }
+                        },
+                        dismissButton = {
+                            TextButton(onClick = { showEditDialog = false }) {
+                                Text("Cancel")
+                            }
+                        }
+                    )
+                }
 
-            // Stats Row
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(16.dp)
-            ) {
-                StatCard(
-                    modifier = Modifier.weight(1f),
-                    title = "Current Streak",
-                    value = "$streak Days",
-                    icon = "🔥",
-                    color = Color(0xFFFF9800) // Orange
-                )
-                
-                StatCard(
-                    modifier = Modifier.weight(1f),
-                    title = "Discipline Score",
-                    value = String.format("%.0f%%", disciplineScore),
-                    icon = "🛡️",
-                    color = Color(0xFF2196F3) // Blue
-                )
-            }
-
-            Spacer(modifier = Modifier.height(24.dp))
-
-            // Monthly Progress
-            Column(modifier = Modifier.fillMaxWidth()) {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween
+                // Scrollable Content
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .weight(1f)
+                        .verticalScroll(rememberScrollState())
+                        .padding(horizontal = 16.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally
                 ) {
-                    Text("Monthly Goal", style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.onSurface)
-                    Text(
-                        "${(monthlyProgress * 100).toInt()}%", 
-                        style = MaterialTheme.typography.titleMedium,
-                        color = MaterialTheme.colorScheme.secondary
-                    )
-                }
-                Spacer(modifier = Modifier.height(8.dp))
-                LinearProgressIndicator(
-                    progress = monthlyProgress.coerceIn(0f, 1f),
-                    modifier = Modifier.fillMaxWidth().height(12.dp).clip(androidx.compose.foundation.shape.RoundedCornerShape(6.dp)),
-                    color = MaterialTheme.colorScheme.secondary,
-                    trackColor = MaterialTheme.colorScheme.surfaceVariant
-                )
-                Spacer(modifier = Modifier.height(4.dp))
-                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                    Text(
-                        formatSeconds(monthlySeconds + totalDailyRealSeconds), 
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                    Text(
-                        "Target: ${userGoals.monthlyGoalHours}h", 
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
+                    Spacer(modifier = Modifier.height(16.dp))
+                    
+                    // Active Session Pulsing Card REMOVED
+
+                    // Circular Progress for Daily
+                    Box(contentAlignment = Alignment.Center) {
+                        val progressColor = if (totalDailyRealSeconds >= dailyGoalSeconds) 
+                            MaterialTheme.colorScheme.primary 
+                        else 
+                            MaterialTheme.colorScheme.tertiary
+
+                        CircularProgress(
+                            progress = dailyProgress, 
+                            color = progressColor,
+                            size = 220.dp
+                        )
+                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                            Text(
+                                text = formatSeconds(totalDailyRealSeconds),
+                                style = MaterialTheme.typography.headlineLarge,
+                                fontWeight = FontWeight.Bold,
+                                color = MaterialTheme.colorScheme.onBackground
+                            )
+                            Text(
+                                text = "/ ${userGoals.dailyGoalHours}h Goal",
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                            if (activeSession != null) {
+                                Spacer(modifier = Modifier.height(4.dp))
+                                Text(
+                                    text = "Active",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.primary,
+                                    fontWeight = FontWeight.Bold
+                                )
+                            }
+                        }
+                    }
+
+                    Spacer(modifier = Modifier.height(32.dp))
+
+                    // Status Card
+                    Card(
+                        colors = CardDefaults.cardColors(
+                            containerColor = MaterialTheme.colorScheme.surfaceVariant
+                        ),
+                        modifier = Modifier.fillMaxWidth(),
+                        elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
+                    ) {
+                         Row(
+                            modifier = Modifier.padding(20.dp).fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Column {
+                                Text("STATUS", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                Spacer(modifier = Modifier.height(4.dp))
+                                
+                                val statusText = if (activeSession != null) "IN OFFICE" else "OUT OF OFFICE"
+                                val statusColor = if (activeSession != null) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.error
+                                
+                                // Pulse Effect for IN OFFICE Text
+                                val infiniteTransition = rememberInfiniteTransition()
+                                val alpha by infiniteTransition.animateFloat(
+                                    initialValue = 1f,
+                                    targetValue = if (activeSession != null) 0.5f else 1f,
+                                    animationSpec = infiniteRepeatable(
+                                        animation = tween(1000, easing = LinearEasing),
+                                        repeatMode = RepeatMode.Reverse
+                                    ), label = "pulse"
+                                )
+
+                                Text(
+                                    text = statusText,
+                                    style = MaterialTheme.typography.titleLarge,
+                                    color = statusColor.copy(alpha = if (activeSession != null) alpha else 1f),
+                                    fontWeight = FontWeight.Bold
+                                )
+                            }
+                            
+                            Button(
+                                onClick = {
+                                    if (activeSession != null) viewModel.checkOutManual() else viewModel.checkInManual()
+                                },
+                                colors = ButtonDefaults.buttonColors(
+                                    containerColor = if (activeSession != null) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.primary,
+                                    contentColor = if (activeSession != null) MaterialTheme.colorScheme.onError else MaterialTheme.colorScheme.onPrimary
+                                )
+                            ) {
+                                Text(if (activeSession != null) "Check Out" else "Check In")
+                            }
+                        }
+                    }
+
+                    Spacer(modifier = Modifier.height(24.dp))
+
+                    // Stats Row
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(16.dp)
+                    ) {
+                        StatCard(
+                            modifier = Modifier.weight(1f),
+                            title = "Current Streak",
+                            value = "$streak Days",
+                            icon = "🔥",
+                            color = Color(0xFFFF9800)
+                        )
+                        
+                        StatCard(
+                            modifier = Modifier.weight(1f),
+                            title = "Discipline Score",
+                            value = String.format("%.0f%%", disciplineScore),
+                            icon = "🛡️",
+                            color = Color(0xFF2196F3)
+                        )
+                    }
+
+                    Spacer(modifier = Modifier.height(24.dp))
+
+                    // Monthly Progress
+                    Column(modifier = Modifier.fillMaxWidth()) {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween
+                        ) {
+                            Text("Monthly Goal", style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.onSurface)
+                            Text(
+                                "${(monthlyProgress * 100).toInt()}%", 
+                                style = MaterialTheme.typography.titleMedium,
+                                color = MaterialTheme.colorScheme.secondary
+                            )
+                        }
+                        Spacer(modifier = Modifier.height(8.dp))
+                        LinearProgressIndicator(
+                            progress = monthlyProgress.coerceIn(0f, 1f),
+                            modifier = Modifier.fillMaxWidth().height(12.dp).clip(androidx.compose.foundation.shape.RoundedCornerShape(6.dp)),
+                            color = MaterialTheme.colorScheme.secondary,
+                            trackColor = MaterialTheme.colorScheme.surfaceVariant
+                        )
+                        Spacer(modifier = Modifier.height(4.dp))
+                        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                            Text(
+                                formatSeconds(monthlySeconds + totalDailyRealSeconds), 
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                            Text(
+                                "Target: ${userGoals.monthlyGoalHours}h", 
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                    }
+                    
+                    Spacer(modifier = Modifier.height(32.dp))
                 }
             }
-            
-            Spacer(modifier = Modifier.height(32.dp))
         }
     }
 }

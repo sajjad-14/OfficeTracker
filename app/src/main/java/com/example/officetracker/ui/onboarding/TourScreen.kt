@@ -2,6 +2,11 @@ package com.example.officetracker.ui.onboarding
 
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.width
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.DateRange
+import androidx.compose.material.icons.filled.Info
+import androidx.compose.material.icons.filled.LocationOn
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -40,11 +45,29 @@ fun TourScreen(
     Column(
         modifier = Modifier.fillMaxSize()
     ) {
+        val pages = listOf(
+            TourPageData(
+                "Automated Tracking",
+                "Track your office hours automatically using Geofencing. No need to manually check in.",
+                Icons.Default.LocationOn
+            ),
+            TourPageData(
+                "Goal Setting",
+                "Set daily and monthly goals to keep yourself disciplined and productive.",
+                Icons.Default.DateRange
+            ),
+            TourPageData(
+                "Detailed Analytics",
+                "View your progress with detailed charts and statistics to improve your work-life balance.",
+                Icons.Default.Info
+            )
+        )
+
         HorizontalPager(
             state = pagerState,
             modifier = Modifier.weight(1f)
         ) { page ->
-            TourPage(page = page)
+            TourPage(data = pages[page])
         }
 
         Row(
@@ -52,10 +75,12 @@ fun TourScreen(
                 .height(50.dp)
                 .fillMaxWidth()
                 .padding(bottom = 16.dp),
-            horizontalArrangement = Arrangement.Center
+            horizontalArrangement = Arrangement.Center,
+            verticalAlignment = Alignment.CenterVertically
         ) {
             repeat(3) { iteration ->
-                val color = if (pagerState.currentPage == iteration) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outline
+                val color = if (pagerState.currentPage == iteration) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surfaceVariant
+                val width = if (pagerState.currentPage == iteration) 24.dp else 10.dp
                 Box(
                     modifier = Modifier
                         .padding(4.dp)
@@ -79,15 +104,22 @@ fun TourScreen(
             },
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(16.dp)
+                .padding(24.dp)
+                .height(56.dp),
+            shape = androidx.compose.foundation.shape.RoundedCornerShape(12.dp)
         ) {
-            Text(if (pagerState.currentPage < 2) "Next" else "Get Started")
+            Text(
+                text = if (pagerState.currentPage < 2) "Next" else "Get Started",
+                style = MaterialTheme.typography.titleMedium
+            )
         }
     }
 }
 
+data class TourPageData(val title: String, val description: String, val icon: androidx.compose.ui.graphics.vector.ImageVector)
+
 @Composable
-fun TourPage(page: Int) {
+fun TourPage(data: TourPageData) {
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -95,22 +127,36 @@ fun TourPage(page: Int) {
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center
     ) {
-        val (title, description) = when (page) {
-            0 -> "Automated Tracking" to "Track your office hours automatically using Geofencing. No need to manually check in."
-            1 -> "Goal Setting" to "Set daily and monthly goals to keep yourself disciplined and productive."
-            else -> "Detailed Analytics" to "View your progress with detailed charts and statistics to improve your work-life balance."
+        Box(
+            modifier = Modifier
+                .size(160.dp)
+                .clip(CircleShape)
+                .background(MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.4f)),
+            contentAlignment = Alignment.Center
+        ) {
+             androidx.compose.material3.Icon(
+                imageVector = data.icon,
+                contentDescription = null,
+                modifier = Modifier.size(80.dp),
+                tint = MaterialTheme.colorScheme.onSecondaryContainer
+            )
         }
+
+        Spacer(modifier = Modifier.height(48.dp))
         
         Text(
-            text = title,
+            text = data.title,
             style = MaterialTheme.typography.headlineMedium,
-            textAlign = TextAlign.Center
+            textAlign = TextAlign.Center,
+            fontWeight = androidx.compose.ui.text.font.FontWeight.Bold,
+            color = MaterialTheme.colorScheme.onSurface
         )
         Spacer(modifier = Modifier.height(16.dp))
         Text(
-            text = description,
+            text = data.description,
             style = MaterialTheme.typography.bodyLarge,
-            textAlign = TextAlign.Center
+            textAlign = TextAlign.Center,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
         )
     }
 }

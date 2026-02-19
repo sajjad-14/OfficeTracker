@@ -29,6 +29,8 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.DateRange
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.KeyboardArrowDown
@@ -155,6 +157,12 @@ class AnalyticsViewModel @Inject constructor(
             repository.deleteSession(session)
         }
     }
+
+    fun addSession(startTime: Long, endTime: Long) {
+        viewModelScope.launch {
+            repository.addPastSession(startTime, endTime)
+        }
+    }
 }
 
 @Composable
@@ -176,142 +184,230 @@ fun AnalyticsScreen(viewModel: AnalyticsViewModel = hiltViewModel()) {
         label = "monthlyProgress"
     )
 
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(MaterialTheme.colorScheme.background)
-            .padding(16.dp)
-    ) {
-        Text("Your Progress", style = MaterialTheme.typography.titleLarge, color = MaterialTheme.colorScheme.onBackground)
-        Spacer(modifier = Modifier.height(16.dp))
-        
-        // Monthly Card
-        Card(
-            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
-            modifier = Modifier.fillMaxWidth(),
-            elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
-        ) {
-            Column(modifier = Modifier.padding(16.dp)) {
-                Text("Monthly Goal", style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.onSurface)
-                Spacer(modifier = Modifier.height(8.dp))
-                LinearProgressIndicator(
-                    progress = animatedProgress,
-                    modifier = Modifier.fillMaxWidth().height(8.dp).clip(androidx.compose.foundation.shape.RoundedCornerShape(4.dp)),
-                    color = MaterialTheme.colorScheme.secondary,
-                    trackColor = MaterialTheme.colorScheme.surface
-                )
-                Spacer(modifier = Modifier.height(8.dp))
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween
-                ) {
-                    Text(
-                        "${formatSeconds(monthlyTotalSeconds)} / ${userGoals.monthlyGoalHours}h",
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                    Text(
-                        "${(progress * 100).toInt()}% Done",
-                        style = MaterialTheme.typography.bodyMedium,
-                        fontWeight = FontWeight.Bold,
-                        color = MaterialTheme.colorScheme.secondary
-                    )
-                }
-                if (remainingSeconds > 0) {
-                    Spacer(modifier = Modifier.height(4.dp))
-                    Text(
-                        "${formatSeconds(remainingSeconds)} remaining",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                } else {
-                    Spacer(modifier = Modifier.height(4.dp))
-                    Text(
-                        "Goal Reached! 🎉",
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.primary,
-                        fontWeight = FontWeight.Bold
-                    )
-                }
-            }
-        }
-        
-        
-        Text("Weekly Overview", style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.onBackground)
-        Spacer(modifier = Modifier.height(8.dp))
-        WeeklyBarChart(history)
-        
-        Spacer(modifier = Modifier.height(24.dp))
+    var showAddDialog by remember { mutableStateOf(false) }
 
-        Text("Insights", style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.onBackground)
-        Spacer(modifier = Modifier.height(8.dp))
-        
-        val avgSeconds = if (history.isNotEmpty()) history.map { it.totalSeconds }.average().toLong() else 0L
-        Card(
-            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
-            modifier = Modifier.fillMaxWidth()
-        ) {
-            Row(
-                modifier = Modifier.padding(16.dp).fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
+    Scaffold(
+        floatingActionButton = {
+            FloatingActionButton(
+                onClick = { showAddDialog = true },
+                containerColor = MaterialTheme.colorScheme.primary,
+                contentColor = MaterialTheme.colorScheme.onPrimary
             ) {
-                 Column {
-                    Text("Average Daily Time", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                    Text(formatSeconds(avgSeconds), style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurface)
-                }
-                Icon(
-                    imageVector = Icons.Default.Star,
-                    contentDescription = null,
-                    tint = MaterialTheme.colorScheme.primary
-                )
+                Icon(androidx.compose.material.icons.Icons.Default.Add, contentDescription = "Add Session")
             }
         }
-        
-        Spacer(modifier = Modifier.height(24.dp))
-
-        Text("This Month's Activity", style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.onBackground)
-        Spacer(modifier = Modifier.height(8.dp))
-
-        // Heatmap / Grid (Same logic as before)
-        val currentMonth = YearMonth.now()
-        val daysInMonth = currentMonth.lengthOfMonth()
-        val days = (1..daysInMonth).map { day ->
-            val stat = history.find { 
-                val statDate = Instant.ofEpochMilli(it.date).atZone(ZoneId.systemDefault()).toLocalDate()
-                statDate.dayOfMonth == day 
-            }
-            day to stat
-        }
-
-        LazyVerticalGrid(
-            columns = GridCells.Adaptive(minSize = 40.dp),
-            modifier = Modifier.fillMaxWidth().height(220.dp),
-            verticalArrangement = Arrangement.spacedBy(4.dp),
-            horizontalArrangement = Arrangement.spacedBy(4.dp)
+    ) { paddingValues ->
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .background(MaterialTheme.colorScheme.background)
+                .padding(paddingValues)
+                .padding(16.dp)
         ) {
-            items(days) { (day, stat) ->
-                DayCell(day, stat, dailyGoalSeconds)
-            }
-        }
-
-        Spacer(modifier = Modifier.height(16.dp))
-        Text("Detailed History", style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.onBackground)
-        Spacer(modifier = Modifier.height(8.dp))
-
-        if (history.isEmpty()) {
-             Box(modifier = Modifier.fillMaxWidth().weight(1f), contentAlignment = Alignment.Center) {
-                 Text("No tracking data yet.", color = MaterialTheme.colorScheme.onSurfaceVariant)
-             }
-        } else {
-            LazyColumn(modifier = Modifier.weight(1f)) {
-                items(history.sortedByDescending { it.date }) { stat ->
-                    StatItem(stat, dailyGoalSeconds, viewModel)
+            Text("Your Progress", style = MaterialTheme.typography.titleLarge, color = MaterialTheme.colorScheme.onBackground)
+            Spacer(modifier = Modifier.height(16.dp))
+            
+            // Monthly Card (Existing code)
+            Card(
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
+                modifier = Modifier.fillMaxWidth(),
+                elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
+            ) {
+                Column(modifier = Modifier.padding(16.dp)) {
+                    Text("Monthly Goal", style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.onSurface)
                     Spacer(modifier = Modifier.height(8.dp))
+                    LinearProgressIndicator(
+                        progress = animatedProgress,
+                        modifier = Modifier.fillMaxWidth().height(8.dp).clip(androidx.compose.foundation.shape.RoundedCornerShape(4.dp)),
+                        color = MaterialTheme.colorScheme.secondary,
+                        trackColor = MaterialTheme.colorScheme.surface
+                    )
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        Text(
+                            "${formatSeconds(monthlyTotalSeconds)} / ${userGoals.monthlyGoalHours}h",
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                        Text(
+                            "${(progress * 100).toInt()}% Done",
+                            style = MaterialTheme.typography.bodyMedium,
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.secondary
+                        )
+                    }
+                    if (remainingSeconds > 0) {
+                        Spacer(modifier = Modifier.height(4.dp))
+                        Text(
+                            "${formatSeconds(remainingSeconds)} remaining",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    } else {
+                        Spacer(modifier = Modifier.height(4.dp))
+                        Text(
+                            "Goal Reached! 🎉",
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.primary,
+                            fontWeight = FontWeight.Bold
+                        )
+                    }
+                }
+            }
+            
+            Spacer(modifier = Modifier.height(24.dp))
+
+            Text("Weekly Overview", style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.onBackground)
+            Spacer(modifier = Modifier.height(8.dp))
+            WeeklyBarChart(history)
+            
+            Spacer(modifier = Modifier.height(24.dp))
+
+            // Only show detailed history section if we have space, or maybe make the whole thing scrollable?
+            // The previous design had the bottom part as lazy column.
+            // Let's keep it but improve empty state.
+
+            Text("Detailed History", style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.onBackground)
+            Spacer(modifier = Modifier.height(8.dp))
+
+            if (history.isEmpty()) {
+                 Box(
+                     modifier = Modifier
+                        .fillMaxWidth()
+                        .weight(1f)
+                        .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha=0.3f), androidx.compose.foundation.shape.RoundedCornerShape(12.dp)),
+                     contentAlignment = Alignment.Center
+                 ) {
+                     Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                         Icon(
+                            imageVector = androidx.compose.material.icons.Icons.Default.DateRange,
+                            contentDescription = null,
+                            modifier = Modifier.size(48.dp),
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f)
+                         )
+                         Spacer(modifier = Modifier.height(8.dp))
+                         Text(
+                             "No tracking data yet.",
+                             color = MaterialTheme.colorScheme.onSurfaceVariant,
+                             style = MaterialTheme.typography.bodyMedium
+                         )
+                         Text(
+                             "Your sessions will appear here.",
+                             color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
+                             style = MaterialTheme.typography.bodySmall
+                         )
+                     }
+                 }
+            } else {
+                LazyColumn(modifier = Modifier.weight(1f)) {
+                    items(history.sortedByDescending { it.date }) { stat ->
+                        StatItem(stat, dailyGoalSeconds, viewModel)
+                        Spacer(modifier = Modifier.height(8.dp))
+                    }
                 }
             }
         }
     }
+
+    if (showAddDialog) {
+        AddSessionDialog(
+            onDismiss = { showAddDialog = false },
+            onConfirm = { start, end ->
+                viewModel.addSession(start, end)
+                showAddDialog = false
+            }
+        )
+    }
+}
+
+@Composable
+fun AddSessionDialog(
+    onDismiss: () -> Unit,
+    onConfirm: (Long, Long) -> Unit
+) {
+    val context = LocalContext.current
+    val today = LocalDate.now()
+    val zoneId = ZoneId.systemDefault()
+    
+    // Default to today, 9 AM - 5 PM
+    var selectedDate by remember { mutableStateOf(today) }
+    var startTime by remember { mutableStateOf(LocalTime.of(9, 0)) }
+    var endTime by remember { mutableStateOf(LocalTime.of(17, 0)) }
+    
+    val formatter = DateTimeFormatter.ofPattern("HH:mm")
+    val dateFormatter = DateTimeFormatter.ofPattern("MMM dd, yyyy")
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("Add Past Session") },
+        text = {
+            Column {
+                // Date Picker Button (Simplified for now, using current Date or simple buttons if DatePicker is complex to setup without library)
+                // For simplicity, let's assume adding for "Today" or "Yesterday". A full date picker might be too much for this step without material3 DatePicker state setup.
+                // Let's use a simple dropdown or just "Date" row that opens a standard DatePickerDialog if possible, 
+                // or just "Add for Today" vs "Add for Yesterday" buttons?
+                // Let's use android.app.DatePickerDialog since we used TimePickerDialog
+                
+                Text("Date", style = MaterialTheme.typography.labelMedium)
+                OutlinedButton(
+                    onClick = {
+                        android.app.DatePickerDialog(context, { _, y, m, d ->
+                            selectedDate = LocalDate.of(y, m + 1, d)
+                        }, selectedDate.year, selectedDate.monthValue - 1, selectedDate.dayOfMonth).show()
+                    },
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Text(selectedDate.format(dateFormatter))
+                }
+                
+                Spacer(modifier = Modifier.height(16.dp))
+
+                Text("Start Time", style = MaterialTheme.typography.labelMedium)
+                OutlinedButton(
+                    onClick = {
+                        TimePickerDialog(context, { _, h, m ->
+                            startTime = LocalTime.of(h, m)
+                        }, startTime.hour, startTime.minute, true).show()
+                    },
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Text(startTime.format(formatter))
+                }
+                
+                Spacer(modifier = Modifier.height(16.dp))
+                
+                Text("End Time", style = MaterialTheme.typography.labelMedium)
+                OutlinedButton(
+                    onClick = {
+                        TimePickerDialog(context, { _, h, m ->
+                            endTime = LocalTime.of(h, m)
+                        }, endTime.hour, endTime.minute, true).show()
+                    },
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Text(endTime.format(formatter))
+                }
+            }
+        },
+        confirmButton = {
+            TextButton(
+                onClick = {
+                    val startInstant = LocalDateTime.of(selectedDate, startTime).atZone(zoneId).toInstant().toEpochMilli()
+                    val endInstant = LocalDateTime.of(selectedDate, endTime).atZone(zoneId).toInstant().toEpochMilli()
+                    
+                    if (endInstant > startInstant) {
+                        onConfirm(startInstant, endInstant)
+                    }
+                }
+            ) { Text("Add") }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) { Text("Cancel") }
+        }
+    )
 }
 
 @Composable

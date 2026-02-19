@@ -261,4 +261,12 @@ class AttendanceRepository @Inject constructor(
             }
         }
     }
+
+
+    suspend fun clearAllData() {
+        attendanceDao.deleteAllSessions()
+        attendanceDao.deleteAllDailyStats()
+        userPreferences.clear()
+        // Note: Geofences should be cleared by ViewModel calling GeofenceManager
+    }
 }

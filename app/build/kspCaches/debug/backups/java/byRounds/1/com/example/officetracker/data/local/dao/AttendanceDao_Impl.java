@@ -9,6 +9,7 @@ import androidx.room.EntityDeletionOrUpdateAdapter;
 import androidx.room.EntityInsertionAdapter;
 import androidx.room.RoomDatabase;
 import androidx.room.RoomSQLiteQuery;
+import androidx.room.SharedSQLiteStatement;
 import androidx.room.util.CursorUtil;
 import androidx.room.util.DBUtil;
 import androidx.sqlite.db.SupportSQLiteStatement;
@@ -42,6 +43,10 @@ public final class AttendanceDao_Impl implements AttendanceDao {
   private final EntityDeletionOrUpdateAdapter<AttendanceSession> __deletionAdapterOfAttendanceSession;
 
   private final EntityDeletionOrUpdateAdapter<AttendanceSession> __updateAdapterOfAttendanceSession;
+
+  private final SharedSQLiteStatement __preparedStmtOfDeleteAllSessions;
+
+  private final SharedSQLiteStatement __preparedStmtOfDeleteAllDailyStats;
 
   public AttendanceDao_Impl(@NonNull final RoomDatabase __db) {
     this.__db = __db;
@@ -120,6 +125,22 @@ public final class AttendanceDao_Impl implements AttendanceDao {
         statement.bindLong(6, entity.getId());
       }
     };
+    this.__preparedStmtOfDeleteAllSessions = new SharedSQLiteStatement(__db) {
+      @Override
+      @NonNull
+      public String createQuery() {
+        final String _query = "DELETE FROM attendance_sessions";
+        return _query;
+      }
+    };
+    this.__preparedStmtOfDeleteAllDailyStats = new SharedSQLiteStatement(__db) {
+      @Override
+      @NonNull
+      public String createQuery() {
+        final String _query = "DELETE FROM daily_stats";
+        return _query;
+      }
+    };
   }
 
   @Override
@@ -193,6 +214,52 @@ public final class AttendanceDao_Impl implements AttendanceDao {
           return Unit.INSTANCE;
         } finally {
           __db.endTransaction();
+        }
+      }
+    }, $completion);
+  }
+
+  @Override
+  public Object deleteAllSessions(final Continuation<? super Unit> $completion) {
+    return CoroutinesRoom.execute(__db, true, new Callable<Unit>() {
+      @Override
+      @NonNull
+      public Unit call() throws Exception {
+        final SupportSQLiteStatement _stmt = __preparedStmtOfDeleteAllSessions.acquire();
+        try {
+          __db.beginTransaction();
+          try {
+            _stmt.executeUpdateDelete();
+            __db.setTransactionSuccessful();
+            return Unit.INSTANCE;
+          } finally {
+            __db.endTransaction();
+          }
+        } finally {
+          __preparedStmtOfDeleteAllSessions.release(_stmt);
+        }
+      }
+    }, $completion);
+  }
+
+  @Override
+  public Object deleteAllDailyStats(final Continuation<? super Unit> $completion) {
+    return CoroutinesRoom.execute(__db, true, new Callable<Unit>() {
+      @Override
+      @NonNull
+      public Unit call() throws Exception {
+        final SupportSQLiteStatement _stmt = __preparedStmtOfDeleteAllDailyStats.acquire();
+        try {
+          __db.beginTransaction();
+          try {
+            _stmt.executeUpdateDelete();
+            __db.setTransactionSuccessful();
+            return Unit.INSTANCE;
+          } finally {
+            __db.endTransaction();
+          }
+        } finally {
+          __preparedStmtOfDeleteAllDailyStats.release(_stmt);
         }
       }
     }, $completion);

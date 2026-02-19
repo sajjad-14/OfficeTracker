@@ -1,12 +1,17 @@
 package com.example.officetracker.ui.onboarding
 
 import android.Manifest
+import android.content.Intent
 import android.content.pm.PackageManager
+import android.net.Uri
 import android.os.Build
+import android.provider.Settings
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.*
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -68,13 +73,35 @@ fun SetupScreen(onSetupComplete: () -> Unit, viewModel: SetupViewModel = hiltVie
         )
     }
 
+
+    var showRationale by remember { mutableStateOf(false) }
+    var showSettingsRedirect by remember { mutableStateOf(false) }
+    var permissionToRequest by remember { mutableStateOf<Array<String>>(emptyArray()) }
+
     val launcher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.RequestMultiplePermissions()
     ) { permissions ->
-        hasForegroundPermission = permissions[Manifest.permission.ACCESS_FINE_LOCATION] == true
+        val fineLocationGranted = permissions[Manifest.permission.ACCESS_FINE_LOCATION] == true
+        hasForegroundPermission = fineLocationGranted
         
+        if (!fineLocationGranted) {
+            val activity = context as? android.app.Activity
+            if (activity != null && !ActivityCompat.shouldShowRequestPermissionRationale(activity, Manifest.permission.ACCESS_FINE_LOCATION)) {
+                 showSettingsRedirect = true
+            }
+        }
+
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-             hasBackgroundPermission = permissions[Manifest.permission.ACCESS_BACKGROUND_LOCATION] == true
+             val bgGranted = permissions[Manifest.permission.ACCESS_BACKGROUND_LOCATION] == true
+             if (permissions.containsKey(Manifest.permission.ACCESS_BACKGROUND_LOCATION)) {
+                 hasBackgroundPermission = bgGranted
+                 if (!bgGranted) {
+                      val activity = context as? android.app.Activity
+                      if (activity != null && !ActivityCompat.shouldShowRequestPermissionRationale(activity, Manifest.permission.ACCESS_BACKGROUND_LOCATION)) {
+                           showSettingsRedirect = true
+                      }
+                 }
+             }
         }
     }
 
@@ -111,35 +138,86 @@ fun SetupScreen(onSetupComplete: () -> Unit, viewModel: SetupViewModel = hiltVie
         )
         Spacer(modifier = Modifier.height(24.dp))
         
-        if (!hasForegroundPermission) {
-            Text(
-                "To track your attendance, we need to know when you are in the office. Please grant location access.",
-                textAlign = TextAlign.Center
-            )
-            Spacer(modifier = Modifier.height(16.dp))
-            Button(onClick = { 
-                launcher.launch(arrayOf(
-                    Manifest.permission.ACCESS_FINE_LOCATION,
-                    Manifest.permission.ACCESS_COARSE_LOCATION,
-                    Manifest.permission.POST_NOTIFICATIONS
-                )) 
-            }) {
-               Text("Grant Location Access") 
-            }
-        } else if (!hasBackgroundPermission) {
-            Text(
-                "For automatic entry/exit tracking while the app is closed, you MUST select 'Allow all the time' in the next screen.",
-                textAlign = TextAlign.Center,
-                color = MaterialTheme.colorScheme.error
-            )
-            Spacer(modifier = Modifier.height(16.dp))
-            Button(onClick = { 
-                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-                    launcher.launch(arrayOf(Manifest.permission.ACCESS_BACKGROUND_LOCATION))
+
+
+    // Rationale Dialog
+    if (showRationale) {
+        AlertDialog(
+            onDismissRequest = { showRationale = false },
+            title = { Text("Permission Required") },
+            text = { Text("App needs location access to automatically detect when you enter or leave the office.") },
+            confirmButton = {
+                TextButton(onClick = {
+                    showRationale = false
+                    launcher.launch(permissionToRequest)
+                }) {
+                    Text("Continue")
                 }
-            }) {
-               Text("Allow All The Time") 
+            },
+            dismissButton = {
+                TextButton(onClick = { showRationale = false }) {
+                    Text("Cancel")
+                }
             }
+        )
+    }
+
+    // Settings Redirect Dialog
+    if (showSettingsRedirect) {
+        AlertDialog(
+            onDismissRequest = { showSettingsRedirect = false },
+            title = { Text("Permission Denied") },
+            text = { Text("It seems you have permanently denied location permission. Please go to app settings to enable it manually.") },
+            confirmButton = {
+                TextButton(onClick = {
+                    showSettingsRedirect = false
+                    val intent = Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS).apply {
+                        data = Uri.fromParts("package", context.packageName, null)
+                    }
+                    context.startActivity(intent)
+                }) {
+                    Text("Open Settings")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showSettingsRedirect = false }) {
+                    Text("Cancel")
+                }
+            }
+        )
+    }
+
+    if (!hasForegroundPermission) {
+        Text(
+            "To track your attendance, we need to know when you are in the office. Please grant location access.",
+            textAlign = TextAlign.Center
+        )
+        Spacer(modifier = Modifier.height(16.dp))
+        Button(onClick = { 
+            permissionToRequest = arrayOf(
+                Manifest.permission.ACCESS_FINE_LOCATION,
+                Manifest.permission.ACCESS_COARSE_LOCATION
+            )
+            // Initial request logic: straightforward for now, could check shouldShowRequestPermissionRationale
+            showRationale = true
+        }) {
+           Text("Grant Location Access") 
+        }
+    } else if (!hasBackgroundPermission) {
+        Text(
+            "For automatic entry/exit tracking while the app is closed, you MUST select 'Allow all the time' in the next screen.",
+            textAlign = TextAlign.Center,
+            color = MaterialTheme.colorScheme.error
+        )
+        Spacer(modifier = Modifier.height(16.dp))
+        Button(onClick = { 
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                permissionToRequest = arrayOf(Manifest.permission.ACCESS_BACKGROUND_LOCATION)
+                showRationale = true
+            }
+        }) {
+           Text("Allow All The Time") 
+        }
         } else {
             Text(
                 "You are ready! Stand at your desk and click below.",

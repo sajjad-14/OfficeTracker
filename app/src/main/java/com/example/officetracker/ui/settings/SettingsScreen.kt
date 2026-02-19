@@ -48,6 +48,13 @@ class SettingsViewModel @Inject constructor(
             repository.exportDataToCsv(uri)
         }
     }
+
+    fun clearData(onCleared: () -> Unit) {
+        viewModelScope.launch {
+            repository.clearAllData()
+            onCleared()
+        }
+    }
 }
 
 @Composable
@@ -145,6 +152,51 @@ fun SettingsScreen(
             Text("Export Data (CSV)")
         }
         Text("Save your work history to a file.", style = MaterialTheme.typography.bodySmall, modifier = Modifier.padding(top = 8.dp), color = MaterialTheme.colorScheme.onSurfaceVariant)
+
+        Spacer(modifier = Modifier.height(32.dp))
+        Divider(color = MaterialTheme.colorScheme.surfaceVariant)
+        Spacer(modifier = Modifier.height(32.dp))
+        
+        Text("Danger Zone", style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.error)
+        Spacer(modifier = Modifier.height(16.dp))
+        
+        var showDeleteDialog by remember { mutableStateOf(false) }
+        
+        if (showDeleteDialog) {
+            AlertDialog(
+                onDismissRequest = { showDeleteDialog = false },
+                title = { Text("Reset Application") },
+                text = { Text("Are you sure you want to delete ALL data? This includes your profile, sessions, and statistics. This action cannot be undone.") },
+                confirmButton = {
+                    TextButton(
+                        onClick = {
+                            showDeleteDialog = false
+                            viewModel.clearData { 
+                                // Navigate to setup/onboarding
+                                onNavigateToSetup()
+                            }
+                        },
+                        colors = ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.error)
+                    ) {
+                        Text("Reset Everything")
+                    }
+                },
+                dismissButton = {
+                    TextButton(onClick = { showDeleteDialog = false }) {
+                        Text("Cancel")
+                    }
+                }
+            )
+        }
+
+        Button(
+            onClick = { showDeleteDialog = true },
+            colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.errorContainer, contentColor = MaterialTheme.colorScheme.onErrorContainer),
+            modifier = Modifier.fillMaxWidth()
+        ) {
+             Text("Reset App Data", color = MaterialTheme.colorScheme.error)
+        }
+        Text("Be careful, this will delete all your data.", style = MaterialTheme.typography.bodySmall, modifier = Modifier.padding(top = 8.dp), color = MaterialTheme.colorScheme.onSurfaceVariant)
 
         Spacer(modifier = Modifier.weight(1f))
         

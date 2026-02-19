@@ -49,4 +49,10 @@ interface AttendanceDao {
 
     @Query("SELECT * FROM daily_stats ORDER BY date DESC")
     fun getAllDailyStats(): Flow<List<DailyStat>>
+
+    @Query("DELETE FROM attendance_sessions")
+    suspend fun deleteAllSessions()
+
+    @Query("DELETE FROM daily_stats")
+    suspend fun deleteAllDailyStats()
 }

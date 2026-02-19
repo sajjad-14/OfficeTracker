@@ -54,6 +54,16 @@ class GeofenceBroadcastReceiver : BroadcastReceiver() {
                 notificationHelper.sendNotification("Checked Out", message)
             }
         }
+        
+        // Trigger Widget Update
+        val widgetIntent = Intent(context, com.example.officetracker.widget.OfficeStatusWidget::class.java).apply {
+            action = android.appwidget.AppWidgetManager.ACTION_APPWIDGET_UPDATE
+        }
+        val ids = android.appwidget.AppWidgetManager.getInstance(context).getAppWidgetIds(
+            android.content.ComponentName(context, com.example.officetracker.widget.OfficeStatusWidget::class.java)
+        )
+        widgetIntent.putExtra(android.appwidget.AppWidgetManager.EXTRA_APPWIDGET_IDS, ids)
+        context.sendBroadcast(widgetIntent)
     }
 }
 

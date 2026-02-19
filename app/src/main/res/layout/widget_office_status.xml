@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="utf-8"?>
+<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@drawable/widget_background"
+    android:padding="16dp">
+
+    <ImageView
+        android:id="@+id/widget_icon"
+        android:layout_width="48dp"
+        android:layout_height="48dp"
+        android:src="@drawable/ic_status_away"
+        android:layout_centerHorizontal="true" />
+
+    <TextView
+        android:id="@+id/widget_status_text"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_below="@id/widget_icon"
+        android:layout_centerHorizontal="true"
+        android:layout_marginTop="8dp"
+        android:text="Away"
+        android:textColor="#FFFFFF"
+        android:textSize="18sp"
+        android:textStyle="bold" />
+
+    <TextView
+        android:id="@+id/widget_timer_text"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_below="@id/widget_status_text"
+        android:layout_centerHorizontal="true"
+        android:layout_marginTop="4dp"
+        android:text="--:--"
+        android:textColor="#DDDDDD"
+        android:textSize="14sp" />
+
+</RelativeLayout>

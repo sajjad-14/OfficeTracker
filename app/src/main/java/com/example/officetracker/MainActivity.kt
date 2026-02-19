@@ -42,6 +42,7 @@ class MainActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        com.example.officetracker.service.LocationService.start(this)
         alarmScheduler.scheduleMorningReminder() // Ensure alarm is set
         setContent {
             OfficeTrackerTheme {

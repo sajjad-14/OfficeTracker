@@ -31,6 +31,7 @@ import androidx.compose.foundation.layout.*
 import javax.inject.Inject
 
 @AndroidEntryPoint
+@OptIn(androidx.compose.foundation.ExperimentalFoundationApi::class)
 class MainActivity : ComponentActivity() {
     
     @Inject lateinit var userPreferences: UserPreferences

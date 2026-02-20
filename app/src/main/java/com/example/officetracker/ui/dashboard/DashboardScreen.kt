@@ -119,6 +119,7 @@ fun DashboardScreen(
     val streak by viewModel.streak.collectAsState()
     val disciplineScore by viewModel.disciplineScore.collectAsState()
     val userGoals by viewModel.userGoals.collectAsState()
+    val userName by viewModel.userName.collectAsState()
     
     // Total calculation moved to sub-components
     

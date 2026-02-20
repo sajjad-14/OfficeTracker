@@ -23,18 +23,11 @@ import com.example.officetracker.ui.onboarding.SetupScreen
 import com.example.officetracker.ui.settings.SettingsScreen
 import com.example.officetracker.ui.theme.OfficeTrackerTheme
 import dagger.hilt.android.AndroidEntryPoint
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.material3.Button
-import androidx.compose.material3.Text
-import androidx.compose.material3.Text
+import androidx.compose.material3.*
+import androidx.compose.material.icons.Icons
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.*
 import javax.inject.Inject
 
 @AndroidEntryPoint
@@ -126,16 +119,16 @@ class MainActivity : ComponentActivity() {
                                          navController.navigate("settings")
                                      })
                                 }
-                                // Navigation Bar Logic embedded here for now, could be separate
-                                androidx.compose.material3.NavigationBar {
-                                    androidx.compose.material3.NavigationBarItem(
-                                        icon = { androidx.compose.material3.Icon(androidx.compose.material.icons.Icons.Default.Home, contentDescription = "Home") },
+                                // Navigation Bar
+                                NavigationBar {
+                                    NavigationBarItem(
+                                        icon = { Icon(Icons.Default.Home, contentDescription = "Home") },
                                         label = { Text("Home") },
                                         selected = true,
                                         onClick = { }
                                     )
-                                    androidx.compose.material3.NavigationBarItem(
-                                        icon = { androidx.compose.material3.Icon(androidx.compose.material.icons.Icons.Default.DateRange, contentDescription = "Analytics") },
+                                    NavigationBarItem(
+                                        icon = { Icon(Icons.Default.DateRange, contentDescription = "Analytics") },
                                         label = { Text("Analytics") },
                                         selected = false,
                                         onClick = { navController.navigate("analytics") }
@@ -166,15 +159,16 @@ class MainActivity : ComponentActivity() {
                                 Box(modifier = Modifier.weight(1f)) {
                                     AnalyticsScreen()
                                 }
-                                androidx.compose.material3.NavigationBar {
-                                    androidx.compose.material3.NavigationBarItem(
-                                        icon = { androidx.compose.material3.Icon(androidx.compose.material.icons.Icons.Default.Home, contentDescription = "Home") },
+                                // Navigation Bar
+                                NavigationBar {
+                                    NavigationBarItem(
+                                        icon = { Icon(Icons.Default.Home, contentDescription = "Home") },
                                         label = { Text("Home") },
                                         selected = false,
                                         onClick = { navController.popBackStack("dashboard", false) }
                                     )
-                                    androidx.compose.material3.NavigationBarItem(
-                                        icon = { androidx.compose.material3.Icon(androidx.compose.material.icons.Icons.Default.DateRange, contentDescription = "Analytics") },
+                                    NavigationBarItem(
+                                        icon = { Icon(Icons.Default.DateRange, contentDescription = "Analytics") },
                                         label = { Text("Analytics") },
                                         selected = true,
                                         onClick = { }

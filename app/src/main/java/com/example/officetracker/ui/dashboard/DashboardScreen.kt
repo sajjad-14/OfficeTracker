@@ -118,23 +118,10 @@ fun DashboardScreen(
     val monthlySeconds by viewModel.monthlySeconds.collectAsState()
     val streak by viewModel.streak.collectAsState()
     val disciplineScore by viewModel.disciplineScore.collectAsState()
-    val currentSessionDuration by viewModel.currentSessionDuration
-    val userName by viewModel.userName.collectAsState()
-    
     val userGoals by viewModel.userGoals.collectAsState()
-
-    // Calculate totals
-    val sessionSeconds = if (activeSession != null) currentSessionDuration else 0L
-    val recordedDailySeconds = todayStats?.totalSeconds ?: 0L
-    val totalDailyRealSeconds = recordedDailySeconds + sessionSeconds
     
-    // Dynamic Goals
-    val dailyGoalSeconds = userGoals.dailyGoalHours * 3600L
-    val monthlyGoalSeconds = userGoals.monthlyGoalHours * 3600L
+    // Total calculation moved to sub-components
     
-    val dailyProgress = (totalDailyRealSeconds.toFloat() / dailyGoalSeconds.toFloat()).coerceIn(0f, 1f)
-    val monthlyProgress = (monthlySeconds + totalDailyRealSeconds).toFloat() / monthlyGoalSeconds.toFloat()
-
     val drawerState = rememberDrawerState(initialValue = DrawerValue.Closed)
     val scope = rememberCoroutineScope()
     var showEditDialog by remember { mutableStateOf(false) }
@@ -317,43 +304,13 @@ fun DashboardScreen(
                 ) {
                     Spacer(modifier = Modifier.height(16.dp))
                     
-                    // Active Session Pulsing Card REMOVED
-
-                    // Circular Progress for Daily
-                    Box(contentAlignment = Alignment.Center) {
-                        val progressColor = if (totalDailyRealSeconds >= dailyGoalSeconds) 
-                            MaterialTheme.colorScheme.primary 
-                        else 
-                            MaterialTheme.colorScheme.tertiary
-
-                        CircularProgress(
-                            progress = dailyProgress, 
-                            color = progressColor,
-                            size = 220.dp
-                        )
-                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                            Text(
-                                text = formatSeconds(totalDailyRealSeconds),
-                                style = MaterialTheme.typography.headlineLarge,
-                                fontWeight = FontWeight.Bold,
-                                color = MaterialTheme.colorScheme.onBackground
-                            )
-                            Text(
-                                text = "/ ${userGoals.dailyGoalHours}h Goal",
-                                style = MaterialTheme.typography.bodyMedium,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-                            if (activeSession != null) {
-                                Spacer(modifier = Modifier.height(4.dp))
-                                Text(
-                                    text = "Active",
-                                    style = MaterialTheme.typography.bodySmall,
-                                    color = MaterialTheme.colorScheme.primary,
-                                    fontWeight = FontWeight.Bold
-                                )
-                            }
-                        }
-                    }
+                    // Circular Progress for Daily (Live Update)
+                    DailyProgressSection(
+                        sessionDurationState = viewModel.currentSessionDuration,
+                        activeSession = activeSession,
+                        todayStats = todayStats,
+                        dailyGoalHours = userGoals.dailyGoalHours
+                    )
 
                     Spacer(modifier = Modifier.height(32.dp))
 
@@ -436,43 +393,125 @@ fun DashboardScreen(
 
                     Spacer(modifier = Modifier.height(24.dp))
 
-                    // Monthly Progress
-                    Column(modifier = Modifier.fillMaxWidth()) {
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.SpaceBetween
-                        ) {
-                            Text("Monthly Goal", style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.onSurface)
-                            Text(
-                                "${(monthlyProgress * 100).toInt()}%", 
-                                style = MaterialTheme.typography.titleMedium,
-                                color = MaterialTheme.colorScheme.secondary
-                            )
-                        }
-                        Spacer(modifier = Modifier.height(8.dp))
-                        LinearProgressIndicator(
-                            progress = monthlyProgress.coerceIn(0f, 1f),
-                            modifier = Modifier.fillMaxWidth().height(12.dp).clip(androidx.compose.foundation.shape.RoundedCornerShape(6.dp)),
-                            color = MaterialTheme.colorScheme.secondary,
-                            trackColor = MaterialTheme.colorScheme.surfaceVariant
-                        )
-                        Spacer(modifier = Modifier.height(4.dp))
-                        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                            Text(
-                                formatSeconds(monthlySeconds + totalDailyRealSeconds), 
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-                            Text(
-                                "Target: ${userGoals.monthlyGoalHours}h", 
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-                        }
-                    }
+                    // Monthly Progress (Live Update)
+                    MonthlyProgressSection(
+                        sessionDurationState = viewModel.currentSessionDuration,
+                        activeSession = activeSession,
+                        todayStats = todayStats,
+                        monthlySeconds = monthlySeconds,
+                        monthlyGoalHours = userGoals.monthlyGoalHours
+                    )
                     
                     Spacer(modifier = Modifier.height(32.dp))
                 }
+            }
+        }
+    }
+}
+
+@Composable
+fun DailyProgressSection(
+    sessionDurationState: State<Long>,
+    activeSession: AttendanceSession?,
+    todayStats: DailyStat?,
+    dailyGoalHours: Int
+) {
+    val currentSessionDuration by sessionDurationState
+    
+    // Calculate totals inside this scope
+    val sessionSeconds = if (activeSession != null) currentSessionDuration else 0L
+    val recordedDailySeconds = todayStats?.totalSeconds ?: 0L
+    val totalDailyRealSeconds = recordedDailySeconds + sessionSeconds
+    val dailyGoalSeconds = dailyGoalHours * 3600L
+    val dailyProgress = (totalDailyRealSeconds.toFloat() / dailyGoalSeconds.toFloat()).coerceIn(0f, 1f)
+
+    Box(contentAlignment = Alignment.Center) {
+        val progressColor = if (totalDailyRealSeconds >= dailyGoalSeconds) 
+            MaterialTheme.colorScheme.primary 
+        else 
+            MaterialTheme.colorScheme.tertiary
+
+        CircularProgress(
+            progress = dailyProgress, 
+            color = progressColor,
+            size = 220.dp
+        )
+        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+            Text(
+                text = formatSeconds(totalDailyRealSeconds),
+                style = MaterialTheme.typography.headlineLarge,
+                fontWeight = FontWeight.Bold,
+                color = MaterialTheme.colorScheme.onBackground
+            )
+            Text(
+                text = "/ ${dailyGoalHours}h Goal",
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+            if (activeSession != null) {
+                Spacer(modifier = Modifier.height(4.dp))
+                Text(
+                    text = "Active",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.primary,
+                    fontWeight = FontWeight.Bold
+                )
+            }
+        }
+    }
+}
+
+@Composable
+fun MonthlyProgressSection(
+    sessionDurationState: State<Long>,
+    activeSession: AttendanceSession?,
+    todayStats: DailyStat?,
+    monthlySeconds: Long,
+    monthlyGoalHours: Int
+) {
+    val currentSessionDuration by sessionDurationState
+    
+    val sessionSeconds = if (activeSession != null) currentSessionDuration else 0L
+    val recordedDailySeconds = todayStats?.totalSeconds ?: 0L
+    val totalDailyRealSeconds = recordedDailySeconds + sessionSeconds
+    
+    val monthlyGoalSeconds = monthlyGoalHours * 3600L
+    val monthlyProgress = (monthlySeconds + totalDailyRealSeconds).toFloat() / monthlyGoalSeconds.toFloat()
+
+    Column(modifier = Modifier.fillMaxWidth()) {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween
+        ) {
+            Text("Monthly Goal", style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.onSurface)
+            Text(
+                "${(monthlyProgress * 100).toInt()}%", 
+                style = MaterialTheme.typography.titleMedium,
+                color = MaterialTheme.colorScheme.secondary
+            )
+        }
+        Spacer(modifier = Modifier.height(8.dp))
+        LinearProgressIndicator(
+            progress = monthlyProgress.coerceIn(0f, 1f),
+            modifier = Modifier.fillMaxWidth().height(12.dp).clip(androidx.compose.foundation.shape.RoundedCornerShape(6.dp)),
+            color = MaterialTheme.colorScheme.secondary,
+            trackColor = MaterialTheme.colorScheme.surfaceVariant
+        )
+        Spacer(modifier = Modifier.height(4.dp))
+        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+            Text(
+                formatSeconds(monthlySeconds + totalDailyRealSeconds), 
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+            Text(
+                "Target: ${monthlyGoalHours}h", 
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+        }
+    }
+}
             }
         }
     }

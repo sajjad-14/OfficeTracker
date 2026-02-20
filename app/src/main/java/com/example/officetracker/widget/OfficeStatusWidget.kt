@@ -67,7 +67,7 @@ class OfficeStatusWidget : AppWidgetProvider() {
                 } else {
                     views.setTextViewText(R.id.widget_status_text, "Away")
                     views.setTextViewText(R.id.widget_timer_text, "--:--")
-                    views.setImageViewResource(R.id.widget_icon, R.mipmap.ic_launcher) // Placeholder
+                    views.setImageViewResource(R.id.widget_icon, R.drawable.ic_status_away)
                 }
                 
                 // Click to open app

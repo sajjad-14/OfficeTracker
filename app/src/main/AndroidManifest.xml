@@ -38,12 +38,12 @@
         <receiver
             android:name=".worker.GeofenceBroadcastReceiver"
             android:enabled="true"
-            android:exported="true" />
+            android:exported="false" />
             
         <receiver
             android:name=".worker.ReminderReceiver"
             android:enabled="true"
-            android:exported="true" />
+            android:exported="false" />
 
         <receiver
             android:name=".worker.BootReceiver"

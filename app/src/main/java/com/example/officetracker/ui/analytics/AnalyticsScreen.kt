@@ -163,8 +163,25 @@ class AnalyticsViewModel @Inject constructor(
             repository.addPastSession(startTime, endTime)
         }
     }
+    fun getHeatmapData(): Flow<Map<LocalDate, Int>> {
+        return history.map { list ->
+            list.associate { stat ->
+                val date = Instant.ofEpochMilli(stat.date).atZone(ZoneId.systemDefault()).toLocalDate()
+                val hours = stat.cappedSeconds / 3600f
+                val intensity = when {
+                    hours == 0f -> 0
+                    hours < 4f -> 1
+                    hours < 6f -> 2
+                    hours < 8f -> 3
+                    else -> 4
+                }
+                date to intensity
+            }
+        }
+    }
 }
 
+@androidx.compose.foundation.ExperimentalFoundationApi
 @Composable
 fun AnalyticsScreen(viewModel: AnalyticsViewModel = hiltViewModel()) {
     val history by viewModel.history.collectAsState()
@@ -266,6 +283,12 @@ fun AnalyticsScreen(viewModel: AnalyticsViewModel = hiltViewModel()) {
             
             Spacer(modifier = Modifier.height(24.dp))
 
+            // Heatmap
+            val heatmapData by viewModel.getHeatmapData().collectAsState(initial = emptyMap())
+            ContributionHeatmap(data = heatmapData)
+            
+            Spacer(modifier = Modifier.height(24.dp))
+
             // Only show detailed history section if we have space, or maybe make the whole thing scrollable?
             // The previous design had the bottom part as lazy column.
             // Let's keep it but improve empty state.
@@ -303,8 +326,13 @@ fun AnalyticsScreen(viewModel: AnalyticsViewModel = hiltViewModel()) {
                  }
             } else {
                 LazyColumn(modifier = Modifier.weight(1f)) {
-                    items(history.sortedByDescending { it.date }) { stat ->
-                        StatItem(stat, dailyGoalSeconds, viewModel)
+                    items(
+                        items = history.sortedByDescending { it.date },
+                        key = { it.date }
+                    ) { stat ->
+                        Box(modifier = Modifier.animateItemPlacement()) {
+                            StatItem(stat, dailyGoalSeconds, viewModel)
+                        }
                         Spacer(modifier = Modifier.height(8.dp))
                     }
                 }

@@ -3,6 +3,9 @@ package com.example.officetracker
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
+import androidx.compose.animation.core.tween
+import androidx.compose.material.icons.filled.Home
+import androidx.compose.material.icons.filled.DateRange
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.LaunchedEffect
@@ -70,28 +73,52 @@ class MainActivity : ComponentActivity() {
                     }
 
                     NavHost(navController = navController, startDestination = startDest) {
-                        composable("welcome") {
+                        composable(
+                            "welcome",
+                            enterTransition = { slideIntoContainer(androidx.compose.animation.AnimatedContentTransitionScope.SlideDirection.Left, animationSpec = tween(500)) },
+                            exitTransition = { slideOutOfContainer(androidx.compose.animation.AnimatedContentTransitionScope.SlideDirection.Left, animationSpec = tween(500)) },
+                            popEnterTransition = { slideIntoContainer(androidx.compose.animation.AnimatedContentTransitionScope.SlideDirection.Right, animationSpec = tween(500)) },
+                            popExitTransition = { slideOutOfContainer(androidx.compose.animation.AnimatedContentTransitionScope.SlideDirection.Right, animationSpec = tween(500)) }
+                        ) {
                             com.example.officetracker.ui.onboarding.WelcomeScreen(onNext = {
                                 navController.navigate("tour") {
                                     popUpTo("welcome") { inclusive = true }
                                 }
                             })
                         }
-                        composable("tour") {
+                        composable(
+                            "tour",
+                            enterTransition = { slideIntoContainer(androidx.compose.animation.AnimatedContentTransitionScope.SlideDirection.Left, animationSpec = tween(500)) },
+                            exitTransition = { slideOutOfContainer(androidx.compose.animation.AnimatedContentTransitionScope.SlideDirection.Left, animationSpec = tween(500)) },
+                            popEnterTransition = { slideIntoContainer(androidx.compose.animation.AnimatedContentTransitionScope.SlideDirection.Right, animationSpec = tween(500)) },
+                            popExitTransition = { slideOutOfContainer(androidx.compose.animation.AnimatedContentTransitionScope.SlideDirection.Right, animationSpec = tween(500)) }
+                        ) {
                             com.example.officetracker.ui.onboarding.TourScreen(onTourComplete = {
                                 navController.navigate("setup") {
                                     popUpTo("tour") { inclusive = true }
                                 }
                             })
                         }
-                        composable("setup") {
+                        composable(
+                            "setup",
+                            enterTransition = { slideIntoContainer(androidx.compose.animation.AnimatedContentTransitionScope.SlideDirection.Left, animationSpec = tween(500)) },
+                            exitTransition = { slideOutOfContainer(androidx.compose.animation.AnimatedContentTransitionScope.SlideDirection.Left, animationSpec = tween(500)) },
+                            popEnterTransition = { slideIntoContainer(androidx.compose.animation.AnimatedContentTransitionScope.SlideDirection.Right, animationSpec = tween(500)) },
+                            popExitTransition = { slideOutOfContainer(androidx.compose.animation.AnimatedContentTransitionScope.SlideDirection.Right, animationSpec = tween(500)) }
+                        ) {
                             SetupScreen(onSetupComplete = {
                                 navController.navigate("dashboard") {
                                     popUpTo("setup") { inclusive = true }
                                 }
                             })
                         }
-                        composable("dashboard") {
+                        composable(
+                            "dashboard",
+                            enterTransition = { slideIntoContainer(androidx.compose.animation.AnimatedContentTransitionScope.SlideDirection.Left, animationSpec = tween(500)) },
+                            exitTransition = { slideOutOfContainer(androidx.compose.animation.AnimatedContentTransitionScope.SlideDirection.Left, animationSpec = tween(500)) },
+                            popEnterTransition = { slideIntoContainer(androidx.compose.animation.AnimatedContentTransitionScope.SlideDirection.Right, animationSpec = tween(500)) },
+                            popExitTransition = { slideOutOfContainer(androidx.compose.animation.AnimatedContentTransitionScope.SlideDirection.Right, animationSpec = tween(500)) }
+                        ) {
                             val viewModel = hiltViewModel<DashboardViewModel>()
                             Column {
                                 Box(modifier = Modifier.weight(1f)) {
@@ -99,28 +126,61 @@ class MainActivity : ComponentActivity() {
                                          navController.navigate("settings")
                                      })
                                 }
-                                Row(
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .padding(16.dp)
-                                ) {
-                                    Button(
-                                        onClick = { navController.navigate("analytics") },
-                                        modifier = Modifier.weight(1f)
-                                    ) {
-                                        Text("Analytics")
-                                    }
+                                // Navigation Bar Logic embedded here for now, could be separate
+                                androidx.compose.material3.NavigationBar {
+                                    androidx.compose.material3.NavigationBarItem(
+                                        icon = { androidx.compose.material3.Icon(androidx.compose.material.icons.Icons.Default.Home, contentDescription = "Home") },
+                                        label = { Text("Home") },
+                                        selected = true,
+                                        onClick = { }
+                                    )
+                                    androidx.compose.material3.NavigationBarItem(
+                                        icon = { androidx.compose.material3.Icon(androidx.compose.material.icons.Icons.Default.DateRange, contentDescription = "Analytics") },
+                                        label = { Text("Analytics") },
+                                        selected = false,
+                                        onClick = { navController.navigate("analytics") }
+                                    )
                                 }
                             }
                         }
-                        composable("settings") {
+                        composable(
+                            "settings",
+                            enterTransition = { slideIntoContainer(androidx.compose.animation.AnimatedContentTransitionScope.SlideDirection.Left, animationSpec = tween(500)) },
+                            exitTransition = { slideOutOfContainer(androidx.compose.animation.AnimatedContentTransitionScope.SlideDirection.Left, animationSpec = tween(500)) },
+                            popEnterTransition = { slideIntoContainer(androidx.compose.animation.AnimatedContentTransitionScope.SlideDirection.Right, animationSpec = tween(500)) },
+                            popExitTransition = { slideOutOfContainer(androidx.compose.animation.AnimatedContentTransitionScope.SlideDirection.Right, animationSpec = tween(500)) }
+                        ) {
                             SettingsScreen(
                                 onNavigateToSetup = { navController.navigate("setup") },
                                 onBack = { navController.popBackStack() }
                             )
                         }
-                        composable("analytics") {
-                            AnalyticsScreen()
+                        composable(
+                            "analytics",
+                            enterTransition = { slideIntoContainer(androidx.compose.animation.AnimatedContentTransitionScope.SlideDirection.Left, animationSpec = tween(500)) },
+                            exitTransition = { slideOutOfContainer(androidx.compose.animation.AnimatedContentTransitionScope.SlideDirection.Left, animationSpec = tween(500)) },
+                            popEnterTransition = { slideIntoContainer(androidx.compose.animation.AnimatedContentTransitionScope.SlideDirection.Right, animationSpec = tween(500)) },
+                            popExitTransition = { slideOutOfContainer(androidx.compose.animation.AnimatedContentTransitionScope.SlideDirection.Right, animationSpec = tween(500)) }
+                        ) {
+                            Column {
+                                Box(modifier = Modifier.weight(1f)) {
+                                    AnalyticsScreen()
+                                }
+                                androidx.compose.material3.NavigationBar {
+                                    androidx.compose.material3.NavigationBarItem(
+                                        icon = { androidx.compose.material3.Icon(androidx.compose.material.icons.Icons.Default.Home, contentDescription = "Home") },
+                                        label = { Text("Home") },
+                                        selected = false,
+                                        onClick = { navController.popBackStack("dashboard", false) }
+                                    )
+                                    androidx.compose.material3.NavigationBarItem(
+                                        icon = { androidx.compose.material3.Icon(androidx.compose.material.icons.Icons.Default.DateRange, contentDescription = "Analytics") },
+                                        label = { Text("Analytics") },
+                                        selected = true,
+                                        onClick = { }
+                                    )
+                                }
+                            }
                         }
                     }
                 }

@@ -1,5 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <full-backup-content>
-    <include domain="sharedpref" path="."/>
-    <include domain="database" path="."/>
+    <!-- Exclude specific files if needed, for example sensitive database -->
+    <!-- <exclude domain="database" path="office_db" /> -->
+    <!-- For this app, location history might be considered sensitive, but user likely wants backup. -->
+    <!-- Let's exclude nothing for now, but having the file prevents manifest errors. -->
 </full-backup-content>

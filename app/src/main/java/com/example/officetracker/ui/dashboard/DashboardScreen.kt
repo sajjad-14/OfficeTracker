@@ -512,10 +512,6 @@ fun MonthlyProgressSection(
         }
     }
 }
-            }
-        }
-    }
-}
 
 @Composable
 fun CircularProgress(progress: Float, color: Color, size: Dp) {

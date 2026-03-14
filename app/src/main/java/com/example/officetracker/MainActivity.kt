@@ -40,7 +40,7 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         com.example.officetracker.service.LocationService.start(this)
-        alarmScheduler.scheduleMorningReminder() // Ensure alarm is set
+        alarmScheduler.scheduleAllReminders() // Schedule morning, midday, and evening smart reminders
         setContent {
             OfficeTrackerTheme {
                 val navController = rememberNavController()

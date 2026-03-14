@@ -163,10 +163,43 @@ fun SettingsScreen(
         Spacer(modifier = Modifier.height(32.dp))
         Divider(color = MaterialTheme.colorScheme.surfaceVariant)
         Spacer(modifier = Modifier.height(32.dp))
-        
+
+        // --- Notifications Section ---
+        Text("Notifications", style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.primary)
+        Spacer(modifier = Modifier.height(4.dp))
+        Text(
+            "Smart reminders — only fire when actually relevant.",
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
+        Spacer(modifier = Modifier.height(16.dp))
+
+        listOf(
+            Triple("🌅 Morning Reminder (9 AM)", "Fires only if you haven't checked in yet", true),
+            Triple("⚠️ Midday Goal Alert (1 PM)", "Warns if you're on track to miss today's goal", true),
+            Triple("🌇 Evening Checkout (6 PM)", "Nudges checkout if you're still marked as active", true)
+        ).forEach { (title, subtitle, enabled) ->
+            Row(
+                modifier = Modifier.fillMaxWidth().padding(vertical = 6.dp),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(title, style = MaterialTheme.typography.bodyLarge, color = MaterialTheme.colorScheme.onSurface)
+                    Text(subtitle, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                }
+                Switch(checked = enabled, onCheckedChange = { })
+            }
+        }
+
+        Spacer(modifier = Modifier.height(32.dp))
+        Divider(color = MaterialTheme.colorScheme.surfaceVariant)
+        Spacer(modifier = Modifier.height(32.dp))
+
         Text("Danger Zone", style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.error)
         Spacer(modifier = Modifier.height(16.dp))
         
+
         var showDeleteDialog by remember { mutableStateOf(false) }
         
         if (showDeleteDialog) {

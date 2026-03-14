@@ -39,7 +39,6 @@ class MainActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        com.example.officetracker.service.LocationService.start(this)
         alarmScheduler.scheduleAllReminders() // Schedule morning, midday, and evening smart reminders
         setContent {
             OfficeTrackerTheme {
@@ -47,6 +46,13 @@ class MainActivity : ComponentActivity() {
                 val officeLocation = userPreferences.officeLocation.collectAsState(initial = null).value
                 val userName = userPreferences.userName.collectAsState(initial = null).value
                 val hasSeenTour = userPreferences.hasSeenTour.collectAsState(initial = null).value
+                
+                // Start tracking service automatically once setup is finished
+                LaunchedEffect(officeLocation, hasSeenTour) {
+                    if (officeLocation?.isSet == true && hasSeenTour == true) {
+                        com.example.officetracker.service.LocationService.start(this@MainActivity)
+                    }
+                }
                 
                 // Determine start destination
                 // We need to wait for all preferences to load

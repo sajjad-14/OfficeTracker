@@ -201,6 +201,8 @@ fun AnalyticsScreen(viewModel: AnalyticsViewModel = hiltViewModel()) {
 
     var showAddDialog by remember { mutableStateOf(false) }
 
+    val heatmapData by viewModel.heatmapData.collectAsState()
+
     Scaffold(
         floatingActionButton = {
             FloatingActionButton(
@@ -212,118 +214,121 @@ fun AnalyticsScreen(viewModel: AnalyticsViewModel = hiltViewModel()) {
             }
         }
     ) { paddingValues ->
-        Column(
+        Box(
             modifier = Modifier
                 .fillMaxSize()
                 .background(MaterialTheme.colorScheme.background)
                 .padding(paddingValues)
-                .padding(16.dp)
+                .padding(horizontal = 16.dp)
         ) {
-            Text("Your Progress", style = MaterialTheme.typography.titleLarge, color = MaterialTheme.colorScheme.onBackground)
-            Spacer(modifier = Modifier.height(16.dp))
-            
-            // Monthly Card (Existing code)
-            Card(
-                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
-                modifier = Modifier.fillMaxWidth(),
-                elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
+            // The entire content should be scrollable
+            LazyColumn(
+                modifier = Modifier.fillMaxSize(),
+                contentPadding = PaddingValues(bottom = 80.dp) // Space for floating button and nav bar
             ) {
-                Column(modifier = Modifier.padding(16.dp)) {
-                    Text("Monthly Goal", style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.onSurface)
-                    Spacer(modifier = Modifier.height(8.dp))
-                    LinearProgressIndicator(
-                        progress = animatedProgress,
-                        modifier = Modifier.fillMaxWidth().height(8.dp).clip(androidx.compose.foundation.shape.RoundedCornerShape(4.dp)),
-                        color = MaterialTheme.colorScheme.secondary,
-                        trackColor = MaterialTheme.colorScheme.surface
-                    )
-                    Spacer(modifier = Modifier.height(8.dp))
-                    Row(
+                item {
+                    Text("Your Progress", style = MaterialTheme.typography.titleLarge, color = MaterialTheme.colorScheme.onBackground)
+                    Spacer(modifier = Modifier.height(16.dp))
+                    
+                    // Monthly Card
+                    Card(
+                        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
                         modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween
+                        elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
                     ) {
-                        Text(
-                            "${formatSeconds(monthlyTotalSeconds)} / ${userGoals.monthlyGoalHours}h",
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                        Text(
-                            "${(progress * 100).toInt()}% Done",
-                            style = MaterialTheme.typography.bodyMedium,
-                            fontWeight = FontWeight.Bold,
-                            color = MaterialTheme.colorScheme.secondary
-                        )
+                        Column(modifier = Modifier.padding(16.dp)) {
+                            Text("Monthly Goal", style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.onSurface)
+                            Spacer(modifier = Modifier.height(8.dp))
+                            LinearProgressIndicator(
+                                progress = animatedProgress,
+                                modifier = Modifier.fillMaxWidth().height(8.dp).clip(androidx.compose.foundation.shape.RoundedCornerShape(4.dp)),
+                                color = MaterialTheme.colorScheme.secondary,
+                                trackColor = MaterialTheme.colorScheme.surface
+                            )
+                            Spacer(modifier = Modifier.height(8.dp))
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceBetween
+                            ) {
+                                Text(
+                                    "${formatSeconds(monthlyTotalSeconds)} / ${userGoals.monthlyGoalHours}h",
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                                Text(
+                                    "${(progress * 100).toInt()}% Done",
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    fontWeight = FontWeight.Bold,
+                                    color = MaterialTheme.colorScheme.secondary
+                                )
+                            }
+                            if (remainingSeconds > 0) {
+                                Spacer(modifier = Modifier.height(4.dp))
+                                Text(
+                                    "${formatSeconds(remainingSeconds)} remaining",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            } else {
+                                Spacer(modifier = Modifier.height(4.dp))
+                                Text(
+                                    "Goal Reached! 🎉",
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    color = MaterialTheme.colorScheme.primary,
+                                    fontWeight = FontWeight.Bold
+                                )
+                            }
+                        }
                     }
-                    if (remainingSeconds > 0) {
-                        Spacer(modifier = Modifier.height(4.dp))
-                        Text(
-                            "${formatSeconds(remainingSeconds)} remaining",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                    } else {
-                        Spacer(modifier = Modifier.height(4.dp))
-                        Text(
-                            "Goal Reached! 🎉",
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.primary,
-                            fontWeight = FontWeight.Bold
-                        )
-                    }
+                    
+                    Spacer(modifier = Modifier.height(24.dp))
+
+                    Text("Weekly Overview", style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.onBackground)
+                    Spacer(modifier = Modifier.height(8.dp))
+                    WeeklyBarChart(history)
+                    
+                    Spacer(modifier = Modifier.height(24.dp))
+
+                    // Heatmap
+                    ContributionHeatmap(data = heatmapData)
+                    
+                    Spacer(modifier = Modifier.height(24.dp))
+
+                    Text("Detailed History", style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.onBackground)
+                    Spacer(modifier = Modifier.height(8.dp))
                 }
-            }
-            
-            Spacer(modifier = Modifier.height(24.dp))
 
-            Text("Weekly Overview", style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.onBackground)
-            Spacer(modifier = Modifier.height(8.dp))
-            WeeklyBarChart(history)
-            
-            Spacer(modifier = Modifier.height(24.dp))
-
-            // Heatmap
-            val heatmapData by viewModel.heatmapData.collectAsState()
-            ContributionHeatmap(data = heatmapData)
-            
-            Spacer(modifier = Modifier.height(24.dp))
-
-            // Only show detailed history section if we have space, or maybe make the whole thing scrollable?
-            // The previous design had the bottom part as lazy column.
-            // Let's keep it but improve empty state.
-
-            Text("Detailed History", style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.onBackground)
-            Spacer(modifier = Modifier.height(8.dp))
-
-            if (history.isEmpty()) {
-                 Box(
-                     modifier = Modifier
-                        .fillMaxWidth()
-                        .weight(1f)
-                        .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha=0.3f), androidx.compose.foundation.shape.RoundedCornerShape(12.dp)),
-                     contentAlignment = Alignment.Center
-                 ) {
-                     Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                         Icon(
-                            imageVector = androidx.compose.material.icons.Icons.Default.DateRange,
-                            contentDescription = null,
-                            modifier = Modifier.size(48.dp),
-                            tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f)
-                         )
-                         Spacer(modifier = Modifier.height(8.dp))
-                         Text(
-                             "No tracking data yet.",
-                             color = MaterialTheme.colorScheme.onSurfaceVariant,
-                             style = MaterialTheme.typography.bodyMedium
-                         )
-                         Text(
-                             "Your sessions will appear here.",
-                             color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
-                             style = MaterialTheme.typography.bodySmall
-                         )
-                     }
-                 }
-            } else {
-                LazyColumn(modifier = Modifier.weight(1f)) {
+                if (history.isEmpty()) {
+                    item {
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(200.dp)
+                                .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha=0.3f), androidx.compose.foundation.shape.RoundedCornerShape(12.dp)),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                                Icon(
+                                    imageVector = androidx.compose.material.icons.Icons.Default.DateRange,
+                                    contentDescription = null,
+                                    modifier = Modifier.size(48.dp),
+                                    tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f)
+                                )
+                                Spacer(modifier = Modifier.height(8.dp))
+                                Text(
+                                    "No tracking data yet.",
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    style = MaterialTheme.typography.bodyMedium
+                                )
+                                Text(
+                                    "Your sessions will appear here.",
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
+                                    style = MaterialTheme.typography.bodySmall
+                                )
+                            }
+                        }
+                    }
+                } else {
                     items(
                         items = history.sortedByDescending { it.date },
                         key = { it.date }

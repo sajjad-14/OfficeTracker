@@ -42,8 +42,8 @@ import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.flow.map
-import kotlinx.coroutines.flow.firstOrNull
+import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.flow
 import javax.inject.Inject
 
 import com.example.officetracker.data.prefs.UserPreferences
@@ -88,27 +88,25 @@ class DashboardViewModel @Inject constructor(
         java.time.LocalDate.now().atStartOfDay(java.time.ZoneId.systemDefault()).toEpochSecond() * 1000
     ).stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
-    // Ticker to update UI during active session
-    private val _currentSessionDuration = mutableStateOf(0L)
-    val currentSessionDuration: State<Long> = _currentSessionDuration
-
-    init {
-        viewModelScope.launch {
-            while(true) {
-                if (activeSession.value != null) {
-                    val today = java.time.LocalDate.now().atStartOfDay(java.time.ZoneId.systemDefault()).toEpochSecond() * 1000
-                    val todaySessionsFlow = repository.getSessionsForDate(today)
-                    // Collect the first emitted list
-                    val todaySessions = todaySessionsFlow.firstOrNull() ?: emptyList()
-                    val firstStart = todaySessions.minOfOrNull { it.startTime } ?: activeSession.value!!.startTime
-                    _currentSessionDuration.value = (System.currentTimeMillis() - firstStart) / 1000
-                } else {
-                    _currentSessionDuration.value = 0L
-                }
-                delay(30000) // Update every 30s to save CPU/battery
-            }
+    private val tickerFlow = flow {
+        while (true) {
+            emit(Unit)
+            delay(30000)
         }
     }
+
+    val currentSessionDuration: StateFlow<Long> = combine(
+        activeSession,
+        todaySessions,
+        tickerFlow
+    ) { active, sessions, _ ->
+        if (active != null) {
+            val firstStart = sessions.minOfOrNull { it.startTime } ?: active.startTime
+            (System.currentTimeMillis() - firstStart) / 1000
+        } else {
+            0L
+        }
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), 0L)
 
     fun checkInManual() {
         viewModelScope.launch { repository.checkIn(isManual = true) }
@@ -143,6 +141,7 @@ fun DashboardScreen(
     val disciplineScore by viewModel.disciplineScore.collectAsState()
     val userGoals by viewModel.userGoals.collectAsState()
     val userName by viewModel.userName.collectAsState()
+    val currentSessionDuration by viewModel.currentSessionDuration.collectAsState()
     
     // Total calculation moved to sub-components
     
@@ -330,7 +329,7 @@ fun DashboardScreen(
                     
                     // Circular Progress for Daily (Live Update)
                     DailyProgressSection(
-                        sessionDurationState = viewModel.currentSessionDuration,
+                        currentSessionDuration = currentSessionDuration,
                         activeSession = activeSession,
                         todayStats = todayStats,
                         dailyGoalHours = userGoals.dailyGoalHours
@@ -432,7 +431,7 @@ fun DashboardScreen(
 
                     // Monthly Progress (Live Update)
                     MonthlyProgressSection(
-                        sessionDurationState = viewModel.currentSessionDuration,
+                        currentSessionDuration = currentSessionDuration,
                         activeSession = activeSession,
                         todayStats = todayStats,
                         monthlySeconds = monthlySeconds,
@@ -460,12 +459,11 @@ fun DashboardScreen(
 
 @Composable
 fun DailyProgressSection(
-    sessionDurationState: State<Long>,
+    currentSessionDuration: Long,
     activeSession: AttendanceSession?,
     todayStats: DailyStat?,
     dailyGoalHours: Int
 ) {
-    val currentSessionDuration by sessionDurationState
     
     // When a session is active, currentSessionDuration = (now - firstEntry) for today.
     // This already includes whatever is in todayStats.totalSeconds for completed sessions.
@@ -517,13 +515,12 @@ fun DailyProgressSection(
 
 @Composable
 fun MonthlyProgressSection(
-    sessionDurationState: State<Long>,
+    currentSessionDuration: Long,
     activeSession: AttendanceSession?,
     todayStats: DailyStat?,
     monthlySeconds: Long,
     monthlyGoalHours: Int
 ) {
-    val currentSessionDuration by sessionDurationState
     
     // When session is active, currentSessionDuration = firstEntry->now for today.
     // That's the live daily real seconds. Otherwise use what's recorded.

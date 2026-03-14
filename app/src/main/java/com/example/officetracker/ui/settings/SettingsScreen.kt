@@ -37,9 +37,18 @@ class SettingsViewModel @Inject constructor(
     val userGoals: StateFlow<UserPreferences.UserGoals> = userPreferences.userGoals
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), UserPreferences.UserGoals())
 
+    val notificationSettings: StateFlow<UserPreferences.NotificationSettings> = userPreferences.notificationSettings
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), UserPreferences.NotificationSettings(true, true, true))
+
     fun updateGoals(daily: Int, monthly: Int) {
         viewModelScope.launch {
             userPreferences.setGoals(daily, monthly)
+        }
+    }
+
+    fun updateNotificationSetting(type: String, enabled: Boolean) {
+        viewModelScope.launch {
+            userPreferences.updateNotificationSetting(type, enabled)
         }
     }
 
@@ -174,11 +183,16 @@ fun SettingsScreen(
         )
         Spacer(modifier = Modifier.height(16.dp))
 
-        listOf(
-            Triple("🌅 Morning Reminder (9 AM)", "Fires only if you haven't checked in yet", true),
-            Triple("⚠️ Midday Goal Alert (1 PM)", "Warns if you're on track to miss today's goal", true),
-            Triple("🌇 Evening Checkout (6 PM)", "Nudges checkout if you're still marked as active", true)
-        ).forEach { (title, subtitle, enabled) ->
+        val notificationSettings by viewModel.notificationSettings.collectAsState()
+
+        val reminders = listOf(
+            Triple("🌅 Morning Reminder (9 AM)", "Fires only if you haven't checked in yet", "morning" to notificationSettings.morningEnabled),
+            Triple("⚠️ Midday Goal Alert (1 PM)", "Warns if you're on track to miss today's goal", "midday" to notificationSettings.middayEnabled),
+            Triple("🌇 Evening Checkout (6 PM)", "Nudges checkout if you're still marked as active", "evening" to notificationSettings.eveningEnabled)
+        )
+
+        reminders.forEach { (title, subtitle, setting) ->
+            val (type, enabled) = setting
             Row(
                 modifier = Modifier.fillMaxWidth().padding(vertical = 6.dp),
                 horizontalArrangement = Arrangement.SpaceBetween,
@@ -188,7 +202,7 @@ fun SettingsScreen(
                     Text(title, style = MaterialTheme.typography.bodyLarge, color = MaterialTheme.colorScheme.onSurface)
                     Text(subtitle, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
-                Switch(checked = enabled, onCheckedChange = { })
+                Switch(checked = enabled, onCheckedChange = { viewModel.updateNotificationSetting(type, it) })
             }
         }
 

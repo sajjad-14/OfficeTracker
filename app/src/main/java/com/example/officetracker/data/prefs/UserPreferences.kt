@@ -39,6 +39,9 @@ class UserPreferences @Inject constructor(@ApplicationContext private val contex
         val MONTHLY_GOAL_HOURS = intPreferencesKey("monthly_goal_hours")
         val USER_NAME = stringPreferencesKey("user_name")
         val HAS_SEEN_TOUR = booleanPreferencesKey("has_seen_tour")
+        val MORNING_REMINDER_ENABLED = booleanPreferencesKey("morning_reminder_enabled")
+        val MIDDAY_REMINDER_ENABLED = booleanPreferencesKey("midday_reminder_enabled")
+        val EVENING_REMINDER_ENABLED = booleanPreferencesKey("evening_reminder_enabled")
     }
 
     val officeLocation: Flow<OfficeLocation> = context.dataStore.data
@@ -106,6 +109,31 @@ class UserPreferences @Inject constructor(@ApplicationContext private val contex
     suspend fun setHasSeenTour(hasSeen: Boolean) {
         context.dataStore.edit { preferences ->
             preferences[Keys.HAS_SEEN_TOUR] = hasSeen
+        }
+    }
+
+    val notificationSettings: Flow<NotificationSettings> = context.dataStore.data
+        .map { preferences ->
+            NotificationSettings(
+                morningEnabled = preferences[Keys.MORNING_REMINDER_ENABLED] ?: true,
+                middayEnabled = preferences[Keys.MIDDAY_REMINDER_ENABLED] ?: true,
+                eveningEnabled = preferences[Keys.EVENING_REMINDER_ENABLED] ?: true
+            )
+        }
+
+    data class NotificationSettings(
+        val morningEnabled: Boolean,
+        val middayEnabled: Boolean,
+        val eveningEnabled: Boolean
+    )
+
+    suspend fun updateNotificationSetting(type: String, enabled: Boolean) {
+        context.dataStore.edit { preferences ->
+            when (type) {
+                "morning" -> preferences[Keys.MORNING_REMINDER_ENABLED] = enabled
+                "midday" -> preferences[Keys.MIDDAY_REMINDER_ENABLED] = enabled
+                "evening" -> preferences[Keys.EVENING_REMINDER_ENABLED] = enabled
+            }
         }
     }
 

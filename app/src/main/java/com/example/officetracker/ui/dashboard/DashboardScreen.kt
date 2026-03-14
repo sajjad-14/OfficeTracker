@@ -66,18 +66,7 @@ class DashboardViewModel @Inject constructor(
     val monthlyStats: StateFlow<Pair<Long, Int>> = repository.getMonthlyStatsIncludingActive()
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), Pair(0L, 0))
 
-    val daysInOffice: StateFlow<Int> = repository.getAllSessions()
-        .map { sessions ->
-            val now = java.time.LocalDate.now()
-            val currentMonth = now.monthValue
-            val currentYear = now.year
-            
-            sessions.map { session ->
-                java.time.Instant.ofEpochMilli(session.startTime).atZone(java.time.ZoneId.systemDefault()).toLocalDate()
-            }.filter { date ->
-                date.monthValue == currentMonth && date.year == currentYear
-            }.distinct().count()
-        }
+    val daysInOffice: StateFlow<Int> = repository.getDaysInOfficeThisMonth()
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), 0)
 
 

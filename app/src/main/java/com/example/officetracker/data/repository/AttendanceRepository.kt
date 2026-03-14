@@ -207,12 +207,8 @@ class AttendanceRepository @Inject constructor(
     }
 
     fun getCurrentActiveSession(): Flow<AttendanceSession?> {
-        // Since Room queries with limit 1 return a list or object, and we want to observe "is active"
-        // We'll observe all sessions and filter. Or simpler, just query active.
-        // But for Flow, let's observe all sessions for today descending and pick first if undefined end.
-        return attendanceDao.getAllSessions().map { list ->
-            list.firstOrNull { it.endTime == null }
-        }
+        // Uses the targeted DB query — no full table scan
+        return attendanceDao.observeActiveSession()
     }
 
     fun getAllSessions(): Flow<List<AttendanceSession>> {
@@ -220,13 +216,21 @@ class AttendanceRepository @Inject constructor(
     }
 
     fun getDisciplineScore(): Flow<Float> {
-        return attendanceDao.getAllDailyStats().map { stats ->
-            val totalDaysWithWork = stats.count { it.totalSeconds > 0 }
-            if (totalDaysWithWork == 0) 0f else {
-                val daysMet = stats.count { it.isGoalMet }
-                (daysMet.toFloat() / totalDaysWithWork.toFloat()) * 100f
-            }
+        // Use two targeted count queries instead of loading all stats
+        val oneYearAgoMs = System.currentTimeMillis() - (365L * 24 * 3600 * 1000)
+        return combine(
+            attendanceDao.countDaysWithWorkSince(oneYearAgoMs),
+            attendanceDao.countGoalMetDaysSince(oneYearAgoMs)
+        ) { totalDays, metDays ->
+            if (totalDays == 0) 0f else (metDays.toFloat() / totalDays.toFloat()) * 100f
         }
+    }
+
+    fun getDaysInOfficeThisMonth(): Flow<Int> {
+        val now = LocalDate.now()
+        val startOfMonth = now.withDayOfMonth(1).atStartOfDay(ZoneId.systemDefault()).toEpochSecond() * 1000
+        val endOfMonth = now.plusMonths(1).withDayOfMonth(1).minusDays(1).atStartOfDay(ZoneId.systemDefault()).toEpochSecond() * 1000
+        return attendanceDao.countDistinctDaysInRange(startOfMonth, endOfMonth)
     }
 
     suspend fun exportDataToCsv(uri: Uri) {

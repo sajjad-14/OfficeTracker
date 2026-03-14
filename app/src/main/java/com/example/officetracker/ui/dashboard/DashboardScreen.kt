@@ -23,8 +23,8 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
@@ -333,6 +333,7 @@ fun DashboardScreen(
 
                     // Status Card
                     Card(
+                        shape = androidx.compose.foundation.shape.RoundedCornerShape(24.dp),
                         colors = CardDefaults.cardColors(
                             containerColor = MaterialTheme.colorScheme.surfaceVariant
                         ),
@@ -370,16 +371,28 @@ fun DashboardScreen(
                                 )
                             }
                             
+                            // Bounce Button Animation
+                            val interactionSource = remember { androidx.compose.foundation.interaction.MutableInteractionSource() }
+                            val isPressed by interactionSource.collectIsPressedAsState()
+                            val scale by animateFloatAsState(
+                                targetValue = if (isPressed) 0.92f else 1f,
+                                animationSpec = spring(dampingRatio = Spring.DampingRatioMediumBouncy),
+                                label = "button_bounce"
+                            )
+
                             Button(
                                 onClick = {
                                     if (activeSession != null) viewModel.checkOutManual() else viewModel.checkInManual()
                                 },
+                                interactionSource = interactionSource,
+                                modifier = Modifier.scale(scale),
+                                shape = androidx.compose.foundation.shape.RoundedCornerShape(16.dp),
                                 colors = ButtonDefaults.buttonColors(
                                     containerColor = if (activeSession != null) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.primary,
                                     contentColor = if (activeSession != null) MaterialTheme.colorScheme.onError else MaterialTheme.colorScheme.onPrimary
                                 )
                             ) {
-                                Text(if (activeSession != null) "Check Out" else "Check In")
+                                Text(if (activeSession != null) "Check Out" else "Check In", fontWeight = FontWeight.Bold)
                             }
                         }
                     }
@@ -554,20 +567,29 @@ fun CircularProgress(progress: Float, color: Color, size: Dp) {
         label = "progress"
     )
     
+    val gradientColors = listOf(
+        MaterialTheme.colorScheme.secondary,
+        MaterialTheme.colorScheme.primary,
+        MaterialTheme.colorScheme.tertiary
+    )
+    
+    val sweepGradient = Brush.sweepGradient(gradientColors)
+    
     Box(modifier = Modifier.size(size)) {
         Canvas(modifier = Modifier.matchParentSize()) {
+            val strokeWidth = 28.dp.toPx()
             // Track
             drawCircle(
-                color = color.copy(alpha = 0.2f),
-                style = Stroke(width = 24.dp.toPx(), cap = StrokeCap.Round)
+                color = MaterialTheme.colorScheme.surfaceVariant,
+                style = Stroke(width = strokeWidth, cap = androidx.compose.ui.graphics.StrokeCap.Round)
             )
             // Progress
             drawArc(
-                color = color,
+                brush = sweepGradient,
                 startAngle = -90f,
                 sweepAngle = 360 * animatedProgress,
                 useCenter = false,
-                style = Stroke(width = 24.dp.toPx(), cap = StrokeCap.Round)
+                style = Stroke(width = strokeWidth, cap = androidx.compose.ui.graphics.StrokeCap.Round)
             )
         }
     }
@@ -589,7 +611,8 @@ fun StatCard(
     color: Color
 ) {
     Card(
-        modifier = modifier,
+        modifier = modifier.clickable { /* Add bounce if interactive later */ },
+        shape = androidx.compose.foundation.shape.RoundedCornerShape(24.dp),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
         elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
     ) {

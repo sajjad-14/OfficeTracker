@@ -26,7 +26,8 @@ fun ContributionHeatmap(
     val year = month.year
 
     Card(
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+        shape = RoundedCornerShape(24.dp),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
         elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
         modifier = Modifier.fillMaxWidth()
     ) {
@@ -167,11 +168,11 @@ fun HeatmapCellStatic(intensity: Int) {
 @Composable
 private fun getIntensityColor(intensity: Int): Color {
     return when (intensity) {
-        0 -> MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f)
-        1 -> MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.4f)
-        2 -> MaterialTheme.colorScheme.primary.copy(alpha = 0.5f)
-        3 -> MaterialTheme.colorScheme.primary.copy(alpha = 0.8f)
-        4 -> MaterialTheme.colorScheme.primary
-        else -> MaterialTheme.colorScheme.surfaceVariant
+        0 -> MaterialTheme.colorScheme.surface.copy(alpha = 0.5f)
+        1 -> MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.6f)
+        2 -> MaterialTheme.colorScheme.secondary.copy(alpha = 0.8f) // Cyan hue
+        3 -> MaterialTheme.colorScheme.primary.copy(alpha = 0.9f) // Green/Teal hue
+        4 -> MaterialTheme.colorScheme.primary // Full brightness green
+        else -> MaterialTheme.colorScheme.surface
     }
 }

@@ -66,115 +66,119 @@ class MainActivity : ComponentActivity() {
                         }
                     }
 
-                    NavHost(navController = navController, startDestination = startDest) {
-                        composable(
-                            "welcome",
-                            enterTransition = { slideIntoContainer(androidx.compose.animation.AnimatedContentTransitionScope.SlideDirection.Left, animationSpec = tween(500)) },
-                            exitTransition = { slideOutOfContainer(androidx.compose.animation.AnimatedContentTransitionScope.SlideDirection.Left, animationSpec = tween(500)) },
-                            popEnterTransition = { slideIntoContainer(androidx.compose.animation.AnimatedContentTransitionScope.SlideDirection.Right, animationSpec = tween(500)) },
-                            popExitTransition = { slideOutOfContainer(androidx.compose.animation.AnimatedContentTransitionScope.SlideDirection.Right, animationSpec = tween(500)) }
-                        ) {
-                            com.example.officetracker.ui.onboarding.WelcomeScreen(onNext = {
-                                navController.navigate("tour") {
-                                    popUpTo("welcome") { inclusive = true }
-                                }
-                            })
-                        }
-                        composable(
-                            "tour",
-                            enterTransition = { slideIntoContainer(androidx.compose.animation.AnimatedContentTransitionScope.SlideDirection.Left, animationSpec = tween(500)) },
-                            exitTransition = { slideOutOfContainer(androidx.compose.animation.AnimatedContentTransitionScope.SlideDirection.Left, animationSpec = tween(500)) },
-                            popEnterTransition = { slideIntoContainer(androidx.compose.animation.AnimatedContentTransitionScope.SlideDirection.Right, animationSpec = tween(500)) },
-                            popExitTransition = { slideOutOfContainer(androidx.compose.animation.AnimatedContentTransitionScope.SlideDirection.Right, animationSpec = tween(500)) }
-                        ) {
-                            com.example.officetracker.ui.onboarding.TourScreen(onTourComplete = {
-                                navController.navigate("setup") {
-                                    popUpTo("tour") { inclusive = true }
-                                }
-                            })
-                        }
-                        composable(
-                            "setup",
-                            enterTransition = { slideIntoContainer(androidx.compose.animation.AnimatedContentTransitionScope.SlideDirection.Left, animationSpec = tween(500)) },
-                            exitTransition = { slideOutOfContainer(androidx.compose.animation.AnimatedContentTransitionScope.SlideDirection.Left, animationSpec = tween(500)) },
-                            popEnterTransition = { slideIntoContainer(androidx.compose.animation.AnimatedContentTransitionScope.SlideDirection.Right, animationSpec = tween(500)) },
-                            popExitTransition = { slideOutOfContainer(androidx.compose.animation.AnimatedContentTransitionScope.SlideDirection.Right, animationSpec = tween(500)) }
-                        ) {
-                            SetupScreen(onSetupComplete = {
-                                navController.navigate("dashboard") {
-                                    popUpTo("setup") { inclusive = true }
-                                }
-                            })
-                        }
-                        composable(
-                            "dashboard",
-                            enterTransition = { slideIntoContainer(androidx.compose.animation.AnimatedContentTransitionScope.SlideDirection.Left, animationSpec = tween(500)) },
-                            exitTransition = { slideOutOfContainer(androidx.compose.animation.AnimatedContentTransitionScope.SlideDirection.Left, animationSpec = tween(500)) },
-                            popEnterTransition = { slideIntoContainer(androidx.compose.animation.AnimatedContentTransitionScope.SlideDirection.Right, animationSpec = tween(500)) },
-                            popExitTransition = { slideOutOfContainer(androidx.compose.animation.AnimatedContentTransitionScope.SlideDirection.Right, animationSpec = tween(500)) }
-                        ) {
-                            val viewModel = hiltViewModel<DashboardViewModel>()
-                            Column {
-                                Box(modifier = Modifier.weight(1f)) {
-                                     DashboardScreen(viewModel, onNavigateToProfile = {
-                                         navController.navigate("settings")
-                                     })
-                                }
-                                // Navigation Bar
+                    // Track current route to highlight selected nav item
+                    val currentBackStack by navController.currentBackStackEntryFlow.collectAsState(initial = navController.currentBackStackEntry)
+                    val currentRoute = currentBackStack?.destination?.route
+                    val showBottomBar = currentRoute in listOf("dashboard", "analytics")
+
+                    Scaffold(
+                        bottomBar = {
+                            if (showBottomBar) {
                                 NavigationBar {
                                     NavigationBarItem(
                                         icon = { Icon(Icons.Default.Home, contentDescription = "Home") },
                                         label = { Text("Home") },
-                                        selected = true,
-                                        onClick = { }
+                                        selected = currentRoute == "dashboard",
+                                        onClick = {
+                                            if (currentRoute != "dashboard") {
+                                                navController.navigate("dashboard") {
+                                                    popUpTo("dashboard") { inclusive = true }
+                                                }
+                                            }
+                                        }
                                     )
                                     NavigationBarItem(
                                         icon = { Icon(Icons.Default.DateRange, contentDescription = "Analytics") },
                                         label = { Text("Analytics") },
-                                        selected = false,
-                                        onClick = { navController.navigate("analytics") }
+                                        selected = currentRoute == "analytics",
+                                        onClick = {
+                                            if (currentRoute != "analytics") {
+                                                navController.navigate("analytics") {
+                                                    popUpTo("dashboard") { inclusive = false }
+                                                }
+                                            }
+                                        }
                                     )
                                 }
                             }
                         }
-                        composable(
-                            "settings",
-                            enterTransition = { slideIntoContainer(androidx.compose.animation.AnimatedContentTransitionScope.SlideDirection.Left, animationSpec = tween(500)) },
-                            exitTransition = { slideOutOfContainer(androidx.compose.animation.AnimatedContentTransitionScope.SlideDirection.Left, animationSpec = tween(500)) },
-                            popEnterTransition = { slideIntoContainer(androidx.compose.animation.AnimatedContentTransitionScope.SlideDirection.Right, animationSpec = tween(500)) },
-                            popExitTransition = { slideOutOfContainer(androidx.compose.animation.AnimatedContentTransitionScope.SlideDirection.Right, animationSpec = tween(500)) }
+                    ) { innerPadding ->
+                        NavHost(
+                            navController = navController,
+                            startDestination = startDest,
+                            modifier = Modifier.padding(innerPadding)
                         ) {
-                            SettingsScreen(
-                                onNavigateToSetup = { navController.navigate("setup") },
-                                onBack = { navController.popBackStack() }
-                            )
-                        }
-                        composable(
-                            "analytics",
-                            enterTransition = { slideIntoContainer(androidx.compose.animation.AnimatedContentTransitionScope.SlideDirection.Left, animationSpec = tween(500)) },
-                            exitTransition = { slideOutOfContainer(androidx.compose.animation.AnimatedContentTransitionScope.SlideDirection.Left, animationSpec = tween(500)) },
-                            popEnterTransition = { slideIntoContainer(androidx.compose.animation.AnimatedContentTransitionScope.SlideDirection.Right, animationSpec = tween(500)) },
-                            popExitTransition = { slideOutOfContainer(androidx.compose.animation.AnimatedContentTransitionScope.SlideDirection.Right, animationSpec = tween(500)) }
-                        ) {
-                            Column {
-                                Box(modifier = Modifier.weight(1f)) {
-                                    AnalyticsScreen()
-                                }
-                                // Navigation Bar
-                                NavigationBar {
-                                    NavigationBarItem(
-                                        icon = { Icon(Icons.Default.Home, contentDescription = "Home") },
-                                        label = { Text("Home") },
-                                        selected = false,
-                                        onClick = { navController.popBackStack("dashboard", false) }
-                                    )
-                                    NavigationBarItem(
-                                        icon = { Icon(Icons.Default.DateRange, contentDescription = "Analytics") },
-                                        label = { Text("Analytics") },
-                                        selected = true,
-                                        onClick = { }
-                                    )
-                                }
+                            composable(
+                                "welcome",
+                                enterTransition = { slideIntoContainer(androidx.compose.animation.AnimatedContentTransitionScope.SlideDirection.Left, animationSpec = tween(500)) },
+                                exitTransition = { slideOutOfContainer(androidx.compose.animation.AnimatedContentTransitionScope.SlideDirection.Left, animationSpec = tween(500)) },
+                                popEnterTransition = { slideIntoContainer(androidx.compose.animation.AnimatedContentTransitionScope.SlideDirection.Right, animationSpec = tween(500)) },
+                                popExitTransition = { slideOutOfContainer(androidx.compose.animation.AnimatedContentTransitionScope.SlideDirection.Right, animationSpec = tween(500)) }
+                            ) {
+                                com.example.officetracker.ui.onboarding.WelcomeScreen(onNext = {
+                                    navController.navigate("tour") {
+                                        popUpTo("welcome") { inclusive = true }
+                                    }
+                                })
+                            }
+                            composable(
+                                "tour",
+                                enterTransition = { slideIntoContainer(androidx.compose.animation.AnimatedContentTransitionScope.SlideDirection.Left, animationSpec = tween(500)) },
+                                exitTransition = { slideOutOfContainer(androidx.compose.animation.AnimatedContentTransitionScope.SlideDirection.Left, animationSpec = tween(500)) },
+                                popEnterTransition = { slideIntoContainer(androidx.compose.animation.AnimatedContentTransitionScope.SlideDirection.Right, animationSpec = tween(500)) },
+                                popExitTransition = { slideOutOfContainer(androidx.compose.animation.AnimatedContentTransitionScope.SlideDirection.Right, animationSpec = tween(500)) }
+                            ) {
+                                com.example.officetracker.ui.onboarding.TourScreen(onTourComplete = {
+                                    navController.navigate("setup") {
+                                        popUpTo("tour") { inclusive = true }
+                                    }
+                                })
+                            }
+                            composable(
+                                "setup",
+                                enterTransition = { slideIntoContainer(androidx.compose.animation.AnimatedContentTransitionScope.SlideDirection.Left, animationSpec = tween(500)) },
+                                exitTransition = { slideOutOfContainer(androidx.compose.animation.AnimatedContentTransitionScope.SlideDirection.Left, animationSpec = tween(500)) },
+                                popEnterTransition = { slideIntoContainer(androidx.compose.animation.AnimatedContentTransitionScope.SlideDirection.Right, animationSpec = tween(500)) },
+                                popExitTransition = { slideOutOfContainer(androidx.compose.animation.AnimatedContentTransitionScope.SlideDirection.Right, animationSpec = tween(500)) }
+                            ) {
+                                SetupScreen(onSetupComplete = {
+                                    navController.navigate("dashboard") {
+                                        popUpTo("setup") { inclusive = true }
+                                    }
+                                })
+                            }
+                            composable(
+                                "dashboard",
+                                enterTransition = { slideIntoContainer(androidx.compose.animation.AnimatedContentTransitionScope.SlideDirection.Left, animationSpec = tween(500)) },
+                                exitTransition = { slideOutOfContainer(androidx.compose.animation.AnimatedContentTransitionScope.SlideDirection.Left, animationSpec = tween(500)) },
+                                popEnterTransition = { slideIntoContainer(androidx.compose.animation.AnimatedContentTransitionScope.SlideDirection.Right, animationSpec = tween(500)) },
+                                popExitTransition = { slideOutOfContainer(androidx.compose.animation.AnimatedContentTransitionScope.SlideDirection.Right, animationSpec = tween(500)) }
+                            ) {
+                                val viewModel = hiltViewModel<DashboardViewModel>()
+                                DashboardScreen(viewModel, onNavigateToProfile = {
+                                    navController.navigate("settings")
+                                })
+                            }
+                            composable(
+                                "settings",
+                                enterTransition = { slideIntoContainer(androidx.compose.animation.AnimatedContentTransitionScope.SlideDirection.Left, animationSpec = tween(500)) },
+                                exitTransition = { slideOutOfContainer(androidx.compose.animation.AnimatedContentTransitionScope.SlideDirection.Left, animationSpec = tween(500)) },
+                                popEnterTransition = { slideIntoContainer(androidx.compose.animation.AnimatedContentTransitionScope.SlideDirection.Right, animationSpec = tween(500)) },
+                                popExitTransition = { slideOutOfContainer(androidx.compose.animation.AnimatedContentTransitionScope.SlideDirection.Right, animationSpec = tween(500)) }
+                            ) {
+                                SettingsScreen(
+                                    onNavigateToSetup = { navController.navigate("setup") },
+                                    onBack = { navController.popBackStack() }
+                                )
+                            }
+                            composable(
+                                "analytics",
+                                enterTransition = { slideIntoContainer(androidx.compose.animation.AnimatedContentTransitionScope.SlideDirection.Left, animationSpec = tween(500)) },
+                                exitTransition = { slideOutOfContainer(androidx.compose.animation.AnimatedContentTransitionScope.SlideDirection.Left, animationSpec = tween(500)) },
+                                popEnterTransition = { slideIntoContainer(androidx.compose.animation.AnimatedContentTransitionScope.SlideDirection.Right, animationSpec = tween(500)) },
+                                popExitTransition = { slideOutOfContainer(androidx.compose.animation.AnimatedContentTransitionScope.SlideDirection.Right, animationSpec = tween(500)) }
+                            ) {
+                                AnalyticsScreen()
                             }
                         }
                     }

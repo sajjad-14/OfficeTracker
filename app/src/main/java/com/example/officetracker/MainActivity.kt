@@ -103,84 +103,87 @@ class MainActivity : ComponentActivity() {
                             }
                         }
                     ) { innerPadding ->
-                        NavHost(
-                            navController = navController,
-                            startDestination = startDest,
-                            modifier = Modifier.padding(innerPadding)
-                        ) {
-                            composable(
-                                "welcome",
-                                enterTransition = { slideIntoContainer(androidx.compose.animation.AnimatedContentTransitionScope.SlideDirection.Left, animationSpec = tween(500)) },
-                                exitTransition = { slideOutOfContainer(androidx.compose.animation.AnimatedContentTransitionScope.SlideDirection.Left, animationSpec = tween(500)) },
-                                popEnterTransition = { slideIntoContainer(androidx.compose.animation.AnimatedContentTransitionScope.SlideDirection.Right, animationSpec = tween(500)) },
-                                popExitTransition = { slideOutOfContainer(androidx.compose.animation.AnimatedContentTransitionScope.SlideDirection.Right, animationSpec = tween(500)) }
-                            ) {
-                                com.example.officetracker.ui.onboarding.WelcomeScreen(onNext = {
-                                    navController.navigate("tour") {
-                                        popUpTo("welcome") { inclusive = true }
-                                    }
-                                })
+                    val routeOrder = listOf("welcome", "tour", "setup", "dashboard", "analytics", "settings")
+                    fun getRouteIndex(route: String?): Int = routeOrder.indexOf(route?.split("?")?.get(0))
+
+                    NavHost(
+                        navController = navController,
+                        startDestination = startDest,
+                        modifier = Modifier.padding(innerPadding),
+                        enterTransition = {
+                            val initial = getRouteIndex(initialState.destination.route)
+                            val target = getRouteIndex(targetState.destination.route)
+                            if (target > initial) {
+                                slideIntoContainer(androidx.compose.animation.AnimatedContentTransitionScope.SlideDirection.Left, animationSpec = tween(500))
+                            } else {
+                                slideIntoContainer(androidx.compose.animation.AnimatedContentTransitionScope.SlideDirection.Right, animationSpec = tween(500))
                             }
-                            composable(
-                                "tour",
-                                enterTransition = { slideIntoContainer(androidx.compose.animation.AnimatedContentTransitionScope.SlideDirection.Left, animationSpec = tween(500)) },
-                                exitTransition = { slideOutOfContainer(androidx.compose.animation.AnimatedContentTransitionScope.SlideDirection.Left, animationSpec = tween(500)) },
-                                popEnterTransition = { slideIntoContainer(androidx.compose.animation.AnimatedContentTransitionScope.SlideDirection.Right, animationSpec = tween(500)) },
-                                popExitTransition = { slideOutOfContainer(androidx.compose.animation.AnimatedContentTransitionScope.SlideDirection.Right, animationSpec = tween(500)) }
-                            ) {
-                                com.example.officetracker.ui.onboarding.TourScreen(onTourComplete = {
-                                    navController.navigate("setup") {
-                                        popUpTo("tour") { inclusive = true }
-                                    }
-                                })
+                        },
+                        exitTransition = {
+                            val initial = getRouteIndex(initialState.destination.route)
+                            val target = getRouteIndex(targetState.destination.route)
+                            if (target > initial) {
+                                slideOutOfContainer(androidx.compose.animation.AnimatedContentTransitionScope.SlideDirection.Left, animationSpec = tween(500))
+                            } else {
+                                slideOutOfContainer(androidx.compose.animation.AnimatedContentTransitionScope.SlideDirection.Right, animationSpec = tween(500))
                             }
-                            composable(
-                                "setup",
-                                enterTransition = { slideIntoContainer(androidx.compose.animation.AnimatedContentTransitionScope.SlideDirection.Left, animationSpec = tween(500)) },
-                                exitTransition = { slideOutOfContainer(androidx.compose.animation.AnimatedContentTransitionScope.SlideDirection.Left, animationSpec = tween(500)) },
-                                popEnterTransition = { slideIntoContainer(androidx.compose.animation.AnimatedContentTransitionScope.SlideDirection.Right, animationSpec = tween(500)) },
-                                popExitTransition = { slideOutOfContainer(androidx.compose.animation.AnimatedContentTransitionScope.SlideDirection.Right, animationSpec = tween(500)) }
-                            ) {
-                                SetupScreen(onSetupComplete = {
-                                    navController.navigate("dashboard") {
-                                        popUpTo("setup") { inclusive = true }
-                                    }
-                                })
+                        },
+                        popEnterTransition = {
+                            val initial = getRouteIndex(initialState.destination.route)
+                            val target = getRouteIndex(targetState.destination.route)
+                            if (target > initial) {
+                                slideIntoContainer(androidx.compose.animation.AnimatedContentTransitionScope.SlideDirection.Left, animationSpec = tween(500))
+                            } else {
+                                slideIntoContainer(androidx.compose.animation.AnimatedContentTransitionScope.SlideDirection.Right, animationSpec = tween(500))
                             }
-                            composable(
-                                "dashboard",
-                                enterTransition = { slideIntoContainer(androidx.compose.animation.AnimatedContentTransitionScope.SlideDirection.Left, animationSpec = tween(500)) },
-                                exitTransition = { slideOutOfContainer(androidx.compose.animation.AnimatedContentTransitionScope.SlideDirection.Left, animationSpec = tween(500)) },
-                                popEnterTransition = { slideIntoContainer(androidx.compose.animation.AnimatedContentTransitionScope.SlideDirection.Right, animationSpec = tween(500)) },
-                                popExitTransition = { slideOutOfContainer(androidx.compose.animation.AnimatedContentTransitionScope.SlideDirection.Right, animationSpec = tween(500)) }
-                            ) {
-                                val viewModel = hiltViewModel<DashboardViewModel>()
-                                DashboardScreen(viewModel, onNavigateToProfile = {
-                                    navController.navigate("settings")
-                                })
-                            }
-                            composable(
-                                "settings",
-                                enterTransition = { slideIntoContainer(androidx.compose.animation.AnimatedContentTransitionScope.SlideDirection.Left, animationSpec = tween(500)) },
-                                exitTransition = { slideOutOfContainer(androidx.compose.animation.AnimatedContentTransitionScope.SlideDirection.Left, animationSpec = tween(500)) },
-                                popEnterTransition = { slideIntoContainer(androidx.compose.animation.AnimatedContentTransitionScope.SlideDirection.Right, animationSpec = tween(500)) },
-                                popExitTransition = { slideOutOfContainer(androidx.compose.animation.AnimatedContentTransitionScope.SlideDirection.Right, animationSpec = tween(500)) }
-                            ) {
-                                SettingsScreen(
-                                    onNavigateToSetup = { navController.navigate("setup") },
-                                    onBack = { navController.popBackStack() }
-                                )
-                            }
-                            composable(
-                                "analytics",
-                                enterTransition = { slideIntoContainer(androidx.compose.animation.AnimatedContentTransitionScope.SlideDirection.Left, animationSpec = tween(500)) },
-                                exitTransition = { slideOutOfContainer(androidx.compose.animation.AnimatedContentTransitionScope.SlideDirection.Left, animationSpec = tween(500)) },
-                                popEnterTransition = { slideIntoContainer(androidx.compose.animation.AnimatedContentTransitionScope.SlideDirection.Right, animationSpec = tween(500)) },
-                                popExitTransition = { slideOutOfContainer(androidx.compose.animation.AnimatedContentTransitionScope.SlideDirection.Right, animationSpec = tween(500)) }
-                            ) {
-                                AnalyticsScreen()
+                        },
+                        popExitTransition = {
+                            val initial = getRouteIndex(initialState.destination.route)
+                            val target = getRouteIndex(targetState.destination.route)
+                            if (target > initial) {
+                                slideOutOfContainer(androidx.compose.animation.AnimatedContentTransitionScope.SlideDirection.Left, animationSpec = tween(500))
+                            } else {
+                                slideOutOfContainer(androidx.compose.animation.AnimatedContentTransitionScope.SlideDirection.Right, animationSpec = tween(500))
                             }
                         }
+                    ) {
+                        composable("welcome") {
+                            com.example.officetracker.ui.onboarding.WelcomeScreen(onNext = {
+                                navController.navigate("tour") {
+                                    popUpTo("welcome") { inclusive = true }
+                                }
+                            })
+                        }
+                        composable("tour") {
+                            com.example.officetracker.ui.onboarding.TourScreen(onTourComplete = {
+                                navController.navigate("setup") {
+                                    popUpTo("tour") { inclusive = true }
+                                }
+                            })
+                        }
+                        composable("setup") {
+                            SetupScreen(onSetupComplete = {
+                                navController.navigate("dashboard") {
+                                    popUpTo("setup") { inclusive = true }
+                                }
+                            })
+                        }
+                        composable("dashboard") {
+                            val viewModel = hiltViewModel<DashboardViewModel>()
+                            DashboardScreen(viewModel, onNavigateToProfile = {
+                                navController.navigate("settings")
+                            })
+                        }
+                        composable("settings") {
+                            SettingsScreen(
+                                onNavigateToSetup = { navController.navigate("setup") },
+                                onBack = { navController.popBackStack() }
+                            )
+                        }
+                        composable("analytics") {
+                            AnalyticsScreen()
+                        }
+                    }
                     }
                 }
             }

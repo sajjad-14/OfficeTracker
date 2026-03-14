@@ -576,12 +576,13 @@ fun CircularProgress(progress: Float, color: Color, size: Dp) {
     
     val sweepGradient = Brush.sweepGradient(gradientColors)
     
+    val trackColor = MaterialTheme.colorScheme.surfaceVariant
     Box(modifier = Modifier.size(size)) {
         Canvas(modifier = Modifier.matchParentSize()) {
             val strokeWidth = 28.dp.toPx()
             // Track
             drawCircle(
-                color = MaterialTheme.colorScheme.surfaceVariant,
+                color = trackColor,
                 style = Stroke(width = strokeWidth, cap = androidx.compose.ui.graphics.StrokeCap.Round)
             )
             // Progress

@@ -55,6 +55,13 @@ class SettingsViewModel @Inject constructor(
             onCleared()
         }
     }
+
+    fun injectMockData(onInjected: () -> Unit) {
+        viewModelScope.launch {
+            repository.injectMockData()
+            onInjected()
+        }
+    }
 }
 
 @Composable
@@ -197,6 +204,21 @@ fun SettingsScreen(
              Text("Reset App Data", color = MaterialTheme.colorScheme.error)
         }
         Text("Be careful, this will delete all your data.", style = MaterialTheme.typography.bodySmall, modifier = Modifier.padding(top = 8.dp), color = MaterialTheme.colorScheme.onSurfaceVariant)
+
+        Spacer(modifier = Modifier.height(16.dp))
+        
+        Button(
+            onClick = {
+                viewModel.injectMockData {
+                    onNavigateToSetup() // Navigate back out after injecting
+                }
+            },
+            colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.tertiaryContainer, contentColor = MaterialTheme.colorScheme.onTertiaryContainer),
+            modifier = Modifier.fillMaxWidth()
+        ) {
+             Text("Inject Mock Data (Testing)", color = MaterialTheme.colorScheme.tertiary)
+        }
+        Text("Fills the app with 60 days of fake attendance data.", style = MaterialTheme.typography.bodySmall, modifier = Modifier.padding(top = 8.dp), color = MaterialTheme.colorScheme.onSurfaceVariant)
 
         Spacer(modifier = Modifier.weight(1f))
         

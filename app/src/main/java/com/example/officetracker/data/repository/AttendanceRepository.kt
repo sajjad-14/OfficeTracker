@@ -268,4 +268,42 @@ class AttendanceRepository @Inject constructor(
         userPreferences.clear()
         // Note: Geofences should be cleared by ViewModel calling GeofenceManager
     }
+
+    suspend fun injectMockData() {
+        // Clear old first for a fresh start
+        attendanceDao.deleteAllSessions()
+        attendanceDao.deleteAllDailyStats()
+
+        val zoneId = ZoneId.systemDefault()
+        val today = LocalDate.now()
+        
+        // Generate last 60 days
+        for (i in 60 downTo 1) {
+            val date = today.minusDays(i.toLong())
+            // Skip weekends mostly
+            if (date.dayOfWeek.value == 6 || date.dayOfWeek.value == 7) {
+                if (Math.random() > 0.1) continue // 10% chance to work on weekend
+            }
+
+            val dateMillis = date.atStartOfDay(zoneId).toEpochSecond() * 1000
+            
+            // Random duration between 4 and 11 hours (to hit all red/green thresholds)
+            val durationHours = 4 + (Math.random() * 7).toFloat()
+            val durationMs = (durationHours * 3600 * 1000).toLong()
+
+            // Random start time between 8 AM and 10 AM
+            val startHour = 8 + (Math.random() * 2).toInt()
+            val startTime = date.atTime(startHour, 0).atZone(zoneId).toEpochSecond() * 1000
+            val endTime = startTime + durationMs
+
+            val session = AttendanceSession(
+                date = dateMillis,
+                startTime = startTime,
+                endTime = endTime,
+                isManual = true
+            )
+            attendanceDao.insertSession(session)
+            recalculateDailyStats(dateMillis)
+        }
+    }
 }

@@ -197,6 +197,10 @@ class AttendanceRepository @Inject constructor(
             .toEpochSecond() * 1000
     }
 
+    fun getStatsRange(startDate: Long, endDate: Long): Flow<List<DailyStat>> {
+        return attendanceDao.getStatsRange(startDate, endDate)
+    }
+
     fun getFullMonthHistory(): Flow<List<DailyStat>> {
         val now = LocalDate.now()
         val startOfMonth =

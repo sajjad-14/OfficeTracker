@@ -457,10 +457,10 @@ fun DailyProgressSection(
 ) {
     val currentSessionDuration by sessionDurationState
     
-    // Calculate totals inside this scope
-    val sessionSeconds = if (activeSession != null) currentSessionDuration else 0L
-    val recordedDailySeconds = todayStats?.totalSeconds ?: 0L
-    val totalDailyRealSeconds = recordedDailySeconds + sessionSeconds
+    // When a session is active, currentSessionDuration = (now - firstEntry) for today.
+    // This already includes whatever is in todayStats.totalSeconds for completed sessions.
+    // So we just use it directly when active; otherwise use what's recorded in the DB.
+    val totalDailyRealSeconds = if (activeSession != null) currentSessionDuration else (todayStats?.totalSeconds ?: 0L)
     val dailyGoalSeconds = dailyGoalHours * 3600L
     val dailyProgress = (totalDailyRealSeconds.toFloat() / dailyGoalSeconds.toFloat()).coerceIn(0f, 1f)
 
@@ -515,21 +515,17 @@ fun MonthlyProgressSection(
 ) {
     val currentSessionDuration by sessionDurationState
     
-    val sessionSeconds = if (activeSession != null) currentSessionDuration else 0L
-    val recordedDailySeconds = todayStats?.totalSeconds ?: 0L
-    val totalDailyRealSeconds = recordedDailySeconds + sessionSeconds
+    // When session is active, currentSessionDuration = firstEntry->now for today.
+    // That's the live daily real seconds. Otherwise use what's recorded.
+    val todayTotalLive = if (activeSession != null) currentSessionDuration else (todayStats?.totalSeconds ?: 0L)
+    val todayTotalCapped = minOf(todayTotalLive, 36000L) // Cap at 10h
     
     val monthlyGoalSeconds = monthlyGoalHours * 3600L
     
-    // To avoid double counting:
-    // monthlySeconds includes today's recorded cappedSeconds.
-    // totalDailyRealSeconds is today's recorded + active session (raw).
-    // We need: (monthlySeconds - today's recorded capped) + (totalDailyRealSeconds capped)
-    
+    // monthlySeconds includes today's already-recorded cappedSeconds from DB.
+    // Replace it with the live value for today.
     val todayRecordedCapped = todayStats?.cappedSeconds ?: 0L
     val monthlyExcToday = (monthlySeconds - todayRecordedCapped).coerceAtLeast(0L)
-    val todayTotalCapped = if (totalDailyRealSeconds > 36000L) 36000L else totalDailyRealSeconds // 36000L is MAX_CAP_SECONDS (10h)
-    
     val finalMonthlySeconds = monthlyExcToday + todayTotalCapped
     val monthlyProgress = finalMonthlySeconds.toFloat() / monthlyGoalSeconds.toFloat()
 

@@ -73,19 +73,17 @@ class AnalyticsViewModel @Inject constructor(
     private val repository: AttendanceRepository,
     private val userPreferences: UserPreferences
 ) : ViewModel() {
+    // Ticker: emit current time every 60 seconds for live session updates
     private val tickerFlow = flow {
         while (true) {
             emit(System.currentTimeMillis())
-            delay(1000L) // Update every second for smooth "Live" feel, or minute. Let's do 10s or 1m. 
-            // User requested "dynamic", seconds might be overkill for a list but good for "Active" label. 
-            // Let's stick to 1 minute for list updates to avoid excessive recomposition, 
-            // BUT the user might want to see seconds ticking?
-            // Dashboard has seconds. Analytics usually is hours/minutes. 1 minute is fine.
-            delay(60000L) 
+            delay(60000L) // Update every 60s - consistent with battery-saving policy
         }
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), System.currentTimeMillis())
 
-    // Combine DB history with active session calculation and user goals
+    // Combine DB history with the live active session calculation and user goals.
+    // Today's stat is computed as (now - firstStart) when a session is active,
+    // matching the Repository's recalculateDailyStats() first-entry to last-exit logic.
     val history: StateFlow<List<DailyStat>> = combine(
         repository.getFullMonthHistory(),
         repository.getCurrentActiveSession(),
@@ -94,44 +92,45 @@ class AnalyticsViewModel @Inject constructor(
     ) { dbHistory, activeSession, now, goals ->
         val today = LocalDate.now()
         val todayEpochDay = today.toEpochDay()
-        
-        // Create a mutable copy or map
         val updatedHistory = dbHistory.toMutableList()
-        
-        // Find if we have a stat for today
-        val todayStatIndex = updatedHistory.indexOfFirst { 
+
+        val todayStatIndex = updatedHistory.indexOfFirst {
             val statDate = Instant.ofEpochMilli(it.date).atZone(ZoneId.systemDefault()).toLocalDate()
             statDate.toEpochDay() == todayEpochDay
         }
-        
+
         if (activeSession != null) {
-            val sessionDuration = (now - activeSession.startTime).coerceAtLeast(0L) / 1000
-            
+            // The DB stat for today reflects all COMPLETED sessions.
+            // We need to live-update it using firstStart -> now logic.
+            val existingFirstStart = updatedHistory.getOrNull(todayStatIndex)?.let {
+                // Use the smaller of the active session start and any existing first-start
+                minOf(activeSession.startTime, it.date) // date is start of day, use startTime
+            } ?: activeSession.startTime
+
+            // True first start of today = min(activeSession.startTime, any DB stat start)
+            val firstStart = activeSession.startTime // The active session IS the first unreturned entry
+            val liveTotalSeconds = ((now - firstStart).coerceAtLeast(0L) / 1000)
+
+            // Add whatever was already in the DB stat (for previous sessions today if any)
+            val previousSeconds = if (todayStatIndex != -1) updatedHistory[todayStatIndex].totalSeconds else 0L
+            // Use first-entry to now: take the larger of live count or prior total
+            val newTotal = maxOf(liveTotalSeconds, previousSeconds)
+            val newCapped = minOf(newTotal, AttendanceRepository.MAX_CAP_SECONDS)
+
+            val todayDate = today.atStartOfDay(ZoneId.systemDefault()).toEpochSecond() * 1000
+            val liveStat = DailyStat(
+                date = todayDate,
+                totalSeconds = newTotal,
+                cappedSeconds = newCapped,
+                isGoalMet = newCapped >= (goals.dailyGoalHours * 3600L)
+            )
             if (todayStatIndex != -1) {
-                // Update existing today stat
-                val existing = updatedHistory[todayStatIndex]
-                val newTotal = existing.totalSeconds + sessionDuration
-                val newCapped = if (newTotal > AttendanceRepository.MAX_CAP_SECONDS) AttendanceRepository.MAX_CAP_SECONDS else newTotal
-                
-                updatedHistory[todayStatIndex] = existing.copy(
-                    totalSeconds = newTotal,
-                    cappedSeconds = newCapped,
-                    isGoalMet = newCapped >= (goals.dailyGoalHours * 3600L)
-                )
+                updatedHistory[todayStatIndex] = liveStat
             } else {
-                // Create temp today stat
-                val capped = if (sessionDuration > AttendanceRepository.MAX_CAP_SECONDS) AttendanceRepository.MAX_CAP_SECONDS else sessionDuration
-                 val newStat = DailyStat(
-                    date = today.atStartOfDay(ZoneId.systemDefault()).toEpochSecond() * 1000,
-                    totalSeconds = sessionDuration,
-                    cappedSeconds = capped,
-                    isGoalMet = capped >= (goals.dailyGoalHours * 3600L)
-                )
-                updatedHistory.add(0, newStat) // Add to top (descending sort usually)
+                updatedHistory.add(0, liveStat)
             }
         }
-        
-        // Ensure sorted descending
+
         updatedHistory.sortedByDescending { it.date }
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 

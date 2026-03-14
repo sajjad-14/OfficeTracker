@@ -125,11 +125,13 @@ fun ContributionHeatmap(
                 horizontalArrangement = Arrangement.End,
                 verticalAlignment = Alignment.CenterVertically
             ) {
+                HeatmapCellStatic(-1)
+                Spacer(modifier = Modifier.width(4.dp))
+                Text("< 6h", style = MaterialTheme.typography.labelSmall, fontSize = 10.sp, color = MaterialTheme.colorScheme.error)
+                Spacer(modifier = Modifier.width(8.dp))
                 Text("Less", style = MaterialTheme.typography.labelSmall, fontSize = 10.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 Spacer(modifier = Modifier.width(4.dp))
                 HeatmapCellStatic(0)
-                Spacer(modifier = Modifier.width(2.dp))
-                HeatmapCellStatic(1)
                 Spacer(modifier = Modifier.width(2.dp))
                 HeatmapCellStatic(2)
                 Spacer(modifier = Modifier.width(2.dp))
@@ -168,8 +170,8 @@ fun HeatmapCellStatic(intensity: Int) {
 @Composable
 private fun getIntensityColor(intensity: Int): Color {
     return when (intensity) {
+        -1 -> MaterialTheme.colorScheme.error // Red for under 6 hours
         0 -> MaterialTheme.colorScheme.surface.copy(alpha = 0.5f)
-        1 -> MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.6f)
         2 -> MaterialTheme.colorScheme.secondary.copy(alpha = 0.8f) // Cyan hue
         3 -> MaterialTheme.colorScheme.primary.copy(alpha = 0.9f) // Green/Teal hue
         4 -> MaterialTheme.colorScheme.primary // Full brightness green

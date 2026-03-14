@@ -169,9 +169,9 @@ class AnalyticsViewModel @Inject constructor(
             val hours = stat.cappedSeconds / 3600f
             val intensity = when {
                 hours == 0f -> 0
-                hours < 4f -> 1
-                hours < 6f -> 2
-                hours < 8f -> 3
+                hours > 0f && hours < 6f -> -1 // Red for under 6 hours
+                hours < 8f -> 2
+                hours < 10f -> 3
                 else -> 4
             }
             date to intensity

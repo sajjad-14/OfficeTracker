@@ -107,7 +107,7 @@ class DashboardViewModel @Inject constructor(
                 } else {
                     _currentSessionDuration.value = 0L
                 }
-                delay(1000)
+                delay(30000) // Update every 30s to save CPU/battery
             }
         }
     }

@@ -96,8 +96,15 @@ class DashboardViewModel @Inject constructor(
     init {
         viewModelScope.launch {
             while(true) {
-                activeSession.value?.let {
-                   _currentSessionDuration.value = (System.currentTimeMillis() - it.startTime) / 1000
+                if (activeSession.value != null) {
+                    val today = java.time.LocalDate.now().atStartOfDay(java.time.ZoneId.systemDefault()).toEpochSecond() * 1000
+                    val todaySessionsFlow = repository.getSessionsForDate(today)
+                    // Collect the first emitted list
+                    val todaySessions = kotlinx.coroutines.flow.firstOrNull(todaySessionsFlow) ?: emptyList()
+                    val firstStart = todaySessions.minOfOrNull { it.startTime } ?: activeSession.value!!.startTime
+                    _currentSessionDuration.value = (System.currentTimeMillis() - firstStart) / 1000
+                } else {
+                    _currentSessionDuration.value = 0L
                 }
                 delay(1000)
             }

@@ -157,12 +157,19 @@ class AttendanceRepository @Inject constructor(
         val sessions = attendanceDao.getSessionsForDateSync(date)
         var totalDurationMs = 0L
 
-        sessions.forEach { session ->
-            val end = session.endTime
-                ?: System.currentTimeMillis() // If still running (edge case), use now, but usually this is called after checkout
-            // Safety check: ensure end >= start
-            if (end > session.startTime) {
-                totalDurationMs += (end - session.startTime)
+        if (sessions.isNotEmpty()) {
+            val firstStart = sessions.minOf { it.startTime }
+            
+            // If any session doesn't have an end time, it means they are currently "In Office"
+            val hasActiveSession = sessions.any { it.endTime == null }
+            val lastEnd = if (hasActiveSession) {
+                System.currentTimeMillis()
+            } else {
+                sessions.maxOf { it.endTime ?: it.startTime }
+            }
+
+            if (lastEnd > firstStart) {
+                totalDurationMs = lastEnd - firstStart
             }
         }
 

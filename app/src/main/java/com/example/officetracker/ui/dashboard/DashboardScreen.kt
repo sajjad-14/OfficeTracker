@@ -79,6 +79,15 @@ class DashboardViewModel @Inject constructor(
     val userName = userPreferences.userName
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), "")
 
+    val todaySessions: StateFlow<List<AttendanceSession>> = repository.getSessionsForDate(
+        java.time.LocalDate.now().atStartOfDay(java.time.ZoneId.systemDefault()).toEpochSecond() * 1000
+    ).stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+
+    val weeklyStats: StateFlow<List<DailyStat>> = repository.getStatsRange(
+        java.time.LocalDate.now().minusDays(6).atStartOfDay(java.time.ZoneId.systemDefault()).toEpochSecond() * 1000,
+        java.time.LocalDate.now().atStartOfDay(java.time.ZoneId.systemDefault()).toEpochSecond() * 1000
+    ).stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+
     // Ticker to update UI during active session
     private val _currentSessionDuration = mutableStateOf(0L)
     val currentSessionDuration: State<Long> = _currentSessionDuration
@@ -430,7 +439,19 @@ fun DashboardScreen(
                         monthlyGoalHours = userGoals.monthlyGoalHours
                     )
                     
-                    Spacer(modifier = Modifier.height(32.dp))
+                    Spacer(modifier = Modifier.height(24.dp))
+                    
+                    val weeklyStats by viewModel.weeklyStats.collectAsState()
+                    if (weeklyStats.isNotEmpty()) {
+                        WeeklySummarySection(stats = weeklyStats)
+                        Spacer(modifier = Modifier.height(24.dp))
+                    }
+
+                    val sessions by viewModel.todaySessions.collectAsState()
+                    if (sessions.isNotEmpty()) {
+                        TodayLogSection(sessions = sessions)
+                        Spacer(modifier = Modifier.height(32.dp))
+                    }
                 }
             }
         }
@@ -624,4 +645,147 @@ fun StatCard(
     }
 }
 
+@Composable
+fun WeeklySummarySection(stats: List<DailyStat>) {
+    Column(modifier = Modifier.fillMaxWidth()) {
+        Text("Weekly Goal Status", style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.primary)
+        Spacer(modifier = Modifier.height(16.dp))
+        
+        Card(
+            modifier = Modifier.fillMaxWidth(),
+            shape = androidx.compose.foundation.shape.RoundedCornerShape(24.dp),
+            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f))
+        ) {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(16.dp),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                // Ensure we have exactly 7 days, padding with empty stats if needed
+                val today = java.time.LocalDate.now()
+                val last7Days = (6 downTo 0).map { today.minusDays(it.toLong()) }
+                
+                last7Days.forEach { date ->
+                    val stat = stats.find { 
+                        java.time.Instant.ofEpochMilli(it.date).atZone(java.time.ZoneId.systemDefault()).toLocalDate() == date 
+                    }
+                    WeeklyDayItem(date = date, stat = stat)
+                }
+            }
+        }
+    }
+}
 
+@Composable
+fun WeeklyDayItem(date: java.time.LocalDate, stat: DailyStat?) {
+    val dayName = date.dayOfWeek.name.take(1)
+    val color = when {
+        stat == null || stat.totalSeconds == 0L -> MaterialTheme.colorScheme.onSurface.copy(alpha = 0.1f)
+        stat.isGoalMet -> MaterialTheme.colorScheme.primary
+        else -> MaterialTheme.colorScheme.error.copy(alpha = 0.7f)
+    }
+    
+    val isToday = date == java.time.LocalDate.now()
+
+    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+        Box(
+            modifier = Modifier
+                .size(32.dp)
+                .background(color, androidx.compose.foundation.shape.CircleShape)
+                .then(
+                    if (isToday) Modifier.border(2.dp, MaterialTheme.colorScheme.onSurface, androidx.compose.foundation.shape.CircleShape)
+                    else Modifier
+                ),
+            contentAlignment = Alignment.Center
+        ) {
+            if (stat != null && stat.isGoalMet) {
+                Text("✓", color = MaterialTheme.colorScheme.onPrimary, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+            }
+        }
+        Spacer(modifier = Modifier.height(8.dp))
+        Text(
+            text = dayName,
+            style = MaterialTheme.typography.labelSmall,
+            color = if (isToday) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
+            fontWeight = if (isToday) FontWeight.Bold else FontWeight.Normal
+        )
+    }
+}
+
+@Composable
+fun TodayLogSection(sessions: List<AttendanceSession>) {
+    Column(modifier = Modifier.fillMaxWidth()) {
+        Text("Today's Log", style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.primary)
+        Spacer(modifier = Modifier.height(16.dp))
+        
+        Card(
+            modifier = Modifier.fillMaxWidth(),
+            shape = androidx.compose.foundation.shape.RoundedCornerShape(24.dp),
+            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f))
+        ) {
+            Column(modifier = Modifier.padding(16.dp)) {
+                sessions.reversed().forEachIndexed { index, session ->
+                    TodayLogItem(session = session)
+                    if (index < sessions.size - 1) {
+                        Divider(
+                            modifier = Modifier.padding(vertical = 12.dp),
+                            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.1f)
+                        )
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+fun TodayLogItem(session: AttendanceSession) {
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Box(
+            modifier = Modifier
+                .size(12.dp)
+                .background(
+                    if (session.endTime == null) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.secondary,
+                    androidx.compose.foundation.shape.CircleShape
+                )
+        )
+        
+        Spacer(modifier = Modifier.width(16.dp))
+        
+        Column(modifier = Modifier.weight(1f)) {
+            Text(
+                text = if (session.endTime == null) "Arrival (Active)" else "Visit",
+                style = MaterialTheme.typography.bodyMedium,
+                fontWeight = FontWeight.Bold,
+                color = MaterialTheme.colorScheme.onSurface
+            )
+            Text(
+                text = "${formatTime(session.startTime)} — ${session.endTime?.let { formatTime(it) } ?: "Now"}",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+        }
+        
+        if (session.isManual) {
+            Text(
+                "Manual",
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.tertiary,
+                modifier = Modifier
+                    .background(MaterialTheme.colorScheme.tertiaryContainer, androidx.compose.foundation.shape.RoundedCornerShape(4.dp))
+                    .padding(horizontal = 4.dp, vertical = 2.dp)
+            )
+        }
+    }
+}
+
+fun formatTime(millis: Long): String {
+    val instant = java.time.Instant.ofEpochMilli(millis)
+    val time = instant.atZone(java.time.ZoneId.systemDefault()).toLocalTime()
+    return time.format(java.time.format.DateTimeFormatter.ofPattern("hh:mm a"))
+}

@@ -43,6 +43,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.firstOrNull
 import javax.inject.Inject
 
 import com.example.officetracker.data.prefs.UserPreferences
@@ -100,7 +101,7 @@ class DashboardViewModel @Inject constructor(
                     val today = java.time.LocalDate.now().atStartOfDay(java.time.ZoneId.systemDefault()).toEpochSecond() * 1000
                     val todaySessionsFlow = repository.getSessionsForDate(today)
                     // Collect the first emitted list
-                    val todaySessions = kotlinx.coroutines.flow.firstOrNull(todaySessionsFlow) ?: emptyList()
+                    val todaySessions = todaySessionsFlow.firstOrNull() ?: emptyList()
                     val firstStart = todaySessions.minOfOrNull { it.startTime } ?: activeSession.value!!.startTime
                     _currentSessionDuration.value = (System.currentTimeMillis() - firstStart) / 1000
                 } else {

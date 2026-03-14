@@ -4,6 +4,9 @@ import com.example.officetracker.data.local.dao.AttendanceDao
 import com.example.officetracker.data.local.entity.AttendanceSession
 import com.example.officetracker.data.local.entity.DailyStat
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.flatMapLatest
+import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.map
 import java.time.Instant
 import java.time.LocalDate
@@ -21,6 +24,8 @@ import java.io.BufferedWriter
 import java.io.OutputStreamWriter
 import com.example.officetracker.data.prefs.UserPreferences
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.ExperimentalCoroutinesApi
 
 @Singleton
 class AttendanceRepository @Inject constructor(
@@ -49,6 +54,51 @@ class AttendanceRepository @Inject constructor(
             now.plusMonths(1).withDayOfMonth(1).minusDays(1).atStartOfDay(ZoneId.systemDefault())
                 .toEpochSecond() * 1000
         return attendanceDao.getTotalCappedSecondsRange(startOfMonth, endOfMonth).map { it ?: 0L }
+    }
+
+    @OptIn(ExperimentalCoroutinesApi::class)
+    fun getMonthlyStatsIncludingActive(): Flow<Pair<Long, Int>> {
+        val ticker = flow {
+            while (true) {
+                emit(Unit)
+                delay(60000) // Re-calculate every minute
+            }
+        }
+
+        return combine(ticker, getCurrentActiveSession()) { _, active ->
+            active
+        }.flatMapLatest { active ->
+            val now = LocalDate.now()
+            val startOfMonth =
+                now.withDayOfMonth(1).atStartOfDay(ZoneId.systemDefault()).toEpochSecond() * 1000
+            val endOfMonth = now.plusMonths(1).withDayOfMonth(1).minusDays(1)
+                .atStartOfDay(ZoneId.systemDefault()).toEpochSecond() * 1000
+
+            attendanceDao.getStatsRange(startOfMonth, endOfMonth).map { stats ->
+                val today = LocalDate.now()
+
+                val recordedCappedSeconds = stats.sumOf { it.cappedSeconds }
+
+                val recordedPresenceCount = stats.count { it.totalSeconds > 0 }
+                val todayHasRecordedPresence = stats.any {
+                    it.totalSeconds > 0 &&
+                            Instant.ofEpochMilli(it.date).atZone(ZoneId.systemDefault())
+                                .toLocalDate() == today
+                }
+
+                val totalPresenceCount = if (active != null && !todayHasRecordedPresence) {
+                    recordedPresenceCount + 1
+                } else {
+                    recordedPresenceCount
+                }
+
+                Pair(recordedCappedSeconds, totalPresenceCount)
+            }
+        }
+    }
+
+    fun getMonthlyPresenceCount(): Flow<Int> {
+         return getMonthlyStatsIncludingActive().map { it.second }
     }
 
     suspend fun checkIn(isManual: Boolean = false) {
@@ -158,59 +208,8 @@ class AttendanceRepository @Inject constructor(
         }
     }
 
-    fun getStreak(): Flow<Int> {
-        return attendanceDao.getAllDailyStats().map { stats ->
-            var streak = 0
-            val today = LocalDate.now()
-            var checkDate = today
-
-            // 1. Check if we count today
-            val todayStat = stats.find {
-                Instant.ofEpochMilli(it.date).atZone(ZoneId.systemDefault()).toLocalDate() == today
-            }
-
-            if (todayStat?.isGoalMet == true) {
-                streak++
-                checkDate = today.minusDays(1)
-            } else {
-                // Today not done yet, or empty. Start checking from yesterday.
-                checkDate = today.minusDays(1)
-            }
-
-            // 2. Check backwards
-            // Limit loop to avoid infinite in case of error, though logic is safe
-            // We can optimize by iterating the list since it's sorted DESC
-            // But finding by date is safer against gaps
-
-            // Optimization: Iterate list to find 'checkDate'.
-            var currentTarget = checkDate
-
-            // Filter stats to those before or on checkDate
-            val pastStats = stats.filter {
-                val d = Instant.ofEpochMilli(it.date).atZone(ZoneId.systemDefault()).toLocalDate()
-                !d.isAfter(currentTarget)
-            }.sortedByDescending { it.date }
-
-            for (stat in pastStats) {
-                val statDate =
-                    Instant.ofEpochMilli(stat.date).atZone(ZoneId.systemDefault()).toLocalDate()
-
-                if (statDate == currentTarget && stat.isGoalMet) {
-                    streak++
-                    currentTarget = currentTarget.minusDays(1)
-                } else if (statDate.isBefore(currentTarget)) {
-                    // Gap detected? 
-                    // If we found a date BEFORE target, it means target is missing.
-                    // Streak breaks.
-                    break
-                }
-                // If statDate == currentTarget but goal not met -> handled by 'else' implicitly as Next iteration won't match or loop ends?
-                // Actually need explicit check: if found but not met -> break
-                if (statDate == currentTarget && !stat.isGoalMet) break
-            }
-
-            streak
-        }
+    fun getAllSessions(): Flow<List<AttendanceSession>> {
+        return attendanceDao.getAllSessions()
     }
 
     fun getDisciplineScore(): Flow<Float> {

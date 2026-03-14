@@ -41,6 +41,7 @@ import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.flow.map
 import javax.inject.Inject
 
 import com.example.officetracker.data.prefs.UserPreferences
@@ -60,8 +61,23 @@ class DashboardViewModel @Inject constructor(
     val monthlySeconds: StateFlow<Long> = repository.getMonthlyCompletedSeconds()
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), 0L)
 
-    val streak: StateFlow<Int> = repository.getStreak()
+    val monthlyStats: StateFlow<Pair<Long, Int>> = repository.getMonthlyStatsIncludingActive()
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), Pair(0L, 0))
+
+    val daysInOffice: StateFlow<Int> = repository.getAllSessions()
+        .map { sessions ->
+            val now = java.time.LocalDate.now()
+            val currentMonth = now.monthValue
+            val currentYear = now.year
+            
+            sessions.map { session ->
+                java.time.Instant.ofEpochMilli(session.startTime).atZone(java.time.ZoneId.systemDefault()).toLocalDate()
+            }.filter { date ->
+                date.monthValue == currentMonth && date.year == currentYear
+            }.distinct().count()
+        }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), 0)
+
 
     val disciplineScore: StateFlow<Float> = repository.getDisciplineScore()
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), 0f)
@@ -116,7 +132,7 @@ fun DashboardScreen(
     val activeSession by viewModel.activeSession.collectAsState()
     val todayStats by viewModel.todayStats.collectAsState()
     val monthlySeconds by viewModel.monthlySeconds.collectAsState()
-    val streak by viewModel.streak.collectAsState()
+    val daysInOffice by viewModel.daysInOffice.collectAsState()
     val disciplineScore by viewModel.disciplineScore.collectAsState()
     val userGoals by viewModel.userGoals.collectAsState()
     val userName by viewModel.userName.collectAsState()
@@ -377,9 +393,9 @@ fun DashboardScreen(
                     ) {
                         StatCard(
                             modifier = Modifier.weight(1f),
-                            title = "Current Streak",
-                            value = "$streak Days",
-                            icon = "🔥",
+                            title = "Days in Office",
+                            value = "$daysInOffice",
+                            icon = "🏢",
                             color = Color(0xFFFF9800)
                         )
                         
@@ -426,7 +442,12 @@ fun DailyProgressSection(
     val dailyGoalSeconds = dailyGoalHours * 3600L
     val dailyProgress = (totalDailyRealSeconds.toFloat() / dailyGoalSeconds.toFloat()).coerceIn(0f, 1f)
 
-    Box(contentAlignment = Alignment.Center) {
+    BoxWithConstraints(
+        modifier = Modifier.fillMaxWidth(),
+        contentAlignment = Alignment.Center
+    ) {
+        val size = minOf(maxWidth * 0.7f, 240.dp)
+        
         val progressColor = if (totalDailyRealSeconds >= dailyGoalSeconds) 
             MaterialTheme.colorScheme.primary 
         else 
@@ -435,7 +456,7 @@ fun DailyProgressSection(
         CircularProgress(
             progress = dailyProgress, 
             color = progressColor,
-            size = 220.dp
+            size = size
         )
         Column(horizontalAlignment = Alignment.CenterHorizontally) {
             Text(
@@ -477,7 +498,18 @@ fun MonthlyProgressSection(
     val totalDailyRealSeconds = recordedDailySeconds + sessionSeconds
     
     val monthlyGoalSeconds = monthlyGoalHours * 3600L
-    val monthlyProgress = (monthlySeconds + totalDailyRealSeconds).toFloat() / monthlyGoalSeconds.toFloat()
+    
+    // To avoid double counting:
+    // monthlySeconds includes today's recorded cappedSeconds.
+    // totalDailyRealSeconds is today's recorded + active session (raw).
+    // We need: (monthlySeconds - today's recorded capped) + (totalDailyRealSeconds capped)
+    
+    val todayRecordedCapped = todayStats?.cappedSeconds ?: 0L
+    val monthlyExcToday = (monthlySeconds - todayRecordedCapped).coerceAtLeast(0L)
+    val todayTotalCapped = if (totalDailyRealSeconds > 36000L) 36000L else totalDailyRealSeconds // 36000L is MAX_CAP_SECONDS (10h)
+    
+    val finalMonthlySeconds = monthlyExcToday + todayTotalCapped
+    val monthlyProgress = finalMonthlySeconds.toFloat() / monthlyGoalSeconds.toFloat()
 
     Column(modifier = Modifier.fillMaxWidth()) {
         Row(
@@ -501,7 +533,7 @@ fun MonthlyProgressSection(
         Spacer(modifier = Modifier.height(4.dp))
         Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
             Text(
-                formatSeconds(monthlySeconds + totalDailyRealSeconds), 
+                formatSeconds(finalMonthlySeconds), 
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )

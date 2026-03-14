@@ -163,22 +163,20 @@ class AnalyticsViewModel @Inject constructor(
             repository.addPastSession(startTime, endTime)
         }
     }
-    fun getHeatmapData(): Flow<Map<LocalDate, Int>> {
-        return history.map { list ->
-            list.associate { stat ->
-                val date = Instant.ofEpochMilli(stat.date).atZone(ZoneId.systemDefault()).toLocalDate()
-                val hours = stat.cappedSeconds / 3600f
-                val intensity = when {
-                    hours == 0f -> 0
-                    hours < 4f -> 1
-                    hours < 6f -> 2
-                    hours < 8f -> 3
-                    else -> 4
-                }
-                date to intensity
+    val heatmapData: StateFlow<Map<LocalDate, Int>> = history.map { list ->
+        list.associate { stat ->
+            val date = Instant.ofEpochMilli(stat.date).atZone(ZoneId.systemDefault()).toLocalDate()
+            val hours = stat.cappedSeconds / 3600f
+            val intensity = when {
+                hours == 0f -> 0
+                hours < 4f -> 1
+                hours < 6f -> 2
+                hours < 8f -> 3
+                else -> 4
             }
+            date to intensity
         }
-    }
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyMap())
 }
 
 @androidx.compose.foundation.ExperimentalFoundationApi
@@ -284,7 +282,7 @@ fun AnalyticsScreen(viewModel: AnalyticsViewModel = hiltViewModel()) {
             Spacer(modifier = Modifier.height(24.dp))
 
             // Heatmap
-            val heatmapData by viewModel.getHeatmapData().collectAsState(initial = emptyMap())
+            val heatmapData by viewModel.heatmapData.collectAsState()
             ContributionHeatmap(data = heatmapData)
             
             Spacer(modifier = Modifier.height(24.dp))

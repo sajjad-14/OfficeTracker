@@ -2,13 +2,8 @@ package com.example.officetracker.ui.analytics
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.lazy.LazyRow
-import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Text
+import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -23,12 +18,12 @@ import java.util.Locale
 @Composable
 fun ContributionHeatmap(
     data: Map<LocalDate, Int>, // Date -> Intensity (0-4)
-    endDate: LocalDate = LocalDate.now(),
-    weeksToShow: Int = 18
+    month: LocalDate = LocalDate.now(),
 ) {
-    val weeks = rememberHeatmapWeeks(data, endDate, weeksToShow)
-    val startMonth = weeks.firstOrNull()?.days?.firstOrNull()?.date?.month?.getDisplayName(TextStyle.SHORT, Locale.getDefault()) ?: ""
-    val endMonth = endDate.month.getDisplayName(TextStyle.SHORT, Locale.getDefault())
+    val firstDayOfMonth = month.withDayOfMonth(1)
+    val lastDayOfMonth = month.plusMonths(1).withDayOfMonth(1).minusDays(1)
+    val startMonthName = month.month.getDisplayName(TextStyle.FULL, Locale.getDefault())
+    val year = month.year
 
     Card(
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
@@ -42,42 +37,79 @@ fun ContributionHeatmap(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Text(
-                    text = "Consistency Map",
+                    text = "$startMonthName $year",
                     style = MaterialTheme.typography.titleMedium,
                     color = MaterialTheme.colorScheme.onSurface
-                )
-                Text(
-                    text = "$startMonth - $endMonth",
-                    style = MaterialTheme.typography.labelSmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
             
             Spacer(modifier = Modifier.height(16.dp))
             
-            Row(modifier = Modifier.fillMaxWidth()) {
-                // Day Labels
-                Column(
-                    modifier = Modifier
-                        .padding(end = 8.dp, top = 0.dp)
-                        .height(118.dp), // Approx height of grid (7 * 12 + 6 * 4 + padding?)
-                    verticalArrangement = Arrangement.SpaceBetween
-                ) {
-                    Text("Mon", style = MaterialTheme.typography.labelSmall, fontSize = 10.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                    Text("Wed", style = MaterialTheme.typography.labelSmall, fontSize = 10.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                    Text("Fri", style = MaterialTheme.typography.labelSmall, fontSize = 10.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            // Day Labels Header
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                val days = listOf("Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat")
+                days.forEach { day ->
+                    Text(
+                        text = day,
+                        modifier = Modifier.weight(1f),
+                        style = MaterialTheme.typography.labelSmall,
+                        fontSize = 10.sp,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        textAlign = androidx.compose.ui.text.style.TextAlign.Center
+                    )
                 }
+            }
 
-                LazyRow(
-                    horizontalArrangement = Arrangement.spacedBy(4.dp),
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    items(weeks) { week ->
-                        Column(
-                            verticalArrangement = Arrangement.spacedBy(4.dp)
-                        ) {
-                            week.days.forEach { dayData ->
-                                HeatmapCell(intensity = dayData.intensity, date = dayData.date)
+            Spacer(modifier = Modifier.height(8.dp))
+
+            // Calendar Grid
+            val daysInMonth = lastDayOfMonth.dayOfMonth
+            val firstDayOfWeek = firstDayOfMonth.dayOfWeek.value % 7 // Sun=0, Mon=1...
+            
+            val totalCells = ((daysInMonth + firstDayOfWeek + 6) / 7) * 7
+            
+            Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                for (week in 0 until (totalCells / 7)) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        for (day in 0 until 7) {
+                            val dayIndex = week * 7 + day
+                            val dateNumber = dayIndex - firstDayOfWeek + 1
+                            
+                            Box(
+                                modifier = Modifier.weight(1f),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                if (dateNumber in 1..daysInMonth) {
+                                    val date = firstDayOfMonth.withDayOfMonth(dateNumber)
+                                    val intensity = data[date] ?: 0
+                                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                                        HeatmapCell(intensity = intensity, date = date)
+                                        Spacer(modifier = Modifier.height(2.dp))
+                                        Text(
+                                            text = dateNumber.toString(),
+                                            style = MaterialTheme.typography.labelSmall,
+                                            fontSize = 8.sp,
+                                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                                        )
+                                    }
+                                } else {
+                                    // Empty cell for padding - keep height consistent
+                                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                                        Spacer(modifier = Modifier.size(16.dp))
+                                        Spacer(modifier = Modifier.height(2.dp))
+                                        Text(
+                                            text = "",
+                                            style = MaterialTheme.typography.labelSmall,
+                                            fontSize = 8.sp
+                                        )
+                                    }
+                                }
                             }
                         }
                     }
@@ -94,15 +126,15 @@ fun ContributionHeatmap(
             ) {
                 Text("Less", style = MaterialTheme.typography.labelSmall, fontSize = 10.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 Spacer(modifier = Modifier.width(4.dp))
-                HeatmapCell(0, LocalDate.now())
+                HeatmapCellStatic(0)
                 Spacer(modifier = Modifier.width(2.dp))
-                HeatmapCell(1, LocalDate.now())
+                HeatmapCellStatic(1)
                 Spacer(modifier = Modifier.width(2.dp))
-                HeatmapCell(2, LocalDate.now())
+                HeatmapCellStatic(2)
                 Spacer(modifier = Modifier.width(2.dp))
-                HeatmapCell(3, LocalDate.now())
+                HeatmapCellStatic(3)
                 Spacer(modifier = Modifier.width(2.dp))
-                HeatmapCell(4, LocalDate.now())
+                HeatmapCellStatic(4)
                 Spacer(modifier = Modifier.width(4.dp))
                 Text("More", style = MaterialTheme.typography.labelSmall, fontSize = 10.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
@@ -110,83 +142,36 @@ fun ContributionHeatmap(
     }
 }
 
-data class DayData(
-    val date: LocalDate,
-    val intensity: Int
-)
-
-data class WeekData(
-    val days: List<DayData>
-)
-
 @Composable
 fun HeatmapCell(intensity: Int, date: LocalDate) {
-    val color = when (intensity) {
-        0 -> MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f)
-        1 -> Color(0xFF9BE9A8) // GitHub Light Green
-        2 -> Color(0xFF40C463)
-        3 -> Color(0xFF30A14E)
-        4 -> Color(0xFF216E39) // GitHub Dark Green
-        else -> MaterialTheme.colorScheme.surfaceVariant
-    }
-    
-    // Check if system is dark theme to adjust colors? 
-    // For now hardcoded "cool" greens, but let's use MaterialTheme if possible for consistency.
-    // Actually user said "cool", maybe neon?
-    // Let's stick to theme primaries but with variations.
-    
-    val themeColor = when (intensity) {
-         0 -> MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f)
-         1 -> MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.4f)
-         2 -> MaterialTheme.colorScheme.primary.copy(alpha = 0.5f)
-         3 -> MaterialTheme.colorScheme.primary.copy(alpha = 0.8f)
-         4 -> MaterialTheme.colorScheme.primary
-         else -> MaterialTheme.colorScheme.surfaceVariant
-    }
-
+    val themeColor = getIntensityColor(intensity)
     Box(
         modifier = Modifier
-            .size(12.dp)
-            .clip(RoundedCornerShape(4.dp)) // Rounder
+            .size(16.dp)
+            .clip(RoundedCornerShape(4.dp))
             .background(themeColor)
     )
 }
 
-fun rememberHeatmapWeeks(
-    data: Map<LocalDate, Int>,
-    endDate: LocalDate,
-    count: Int
-): List<WeekData> {
-    val weeks = mutableListOf<WeekData>()
-    var current = endDate
-    
-    // GitHub ends on Today.
-    // Find Sat of this week.
-    val dayOfWeek = current.dayOfWeek.value % 7 // Sun=0...
-    // Adjust to end on Saturday
-    val daysUntilSat = 6 - dayOfWeek
-    val gridEndDate = current.plusDays(daysUntilSat.toLong())
-    
-    // We want 'count' weeks ending at 'gridEndDate'
-    val weekDuration = 7
-    val totalDays = count * weekDuration
-    
-    val gridStartDate = gridEndDate.minusDays((totalDays - 1).toLong())
-    
-    var iterDate = gridStartDate
+@Composable
+fun HeatmapCellStatic(intensity: Int) {
+    val themeColor = getIntensityColor(intensity)
+    Box(
+        modifier = Modifier
+            .size(12.dp)
+            .clip(RoundedCornerShape(3.dp))
+            .background(themeColor)
+    )
+}
 
-    repeat(count) {
-        val days = mutableListOf<DayData>()
-        repeat(7) {
-            val intensity = data[iterDate] ?: 0
-            // Don't show future days in the last week?
-            val actualIntensity = if (iterDate.isAfter(endDate)) 0 else intensity
-            
-            days.add(DayData(iterDate, actualIntensity))
-            iterDate = iterDate.plusDays(1)
-        }
-        weeks.add(WeekData(days))
+@Composable
+private fun getIntensityColor(intensity: Int): Color {
+    return when (intensity) {
+        0 -> MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f)
+        1 -> MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.4f)
+        2 -> MaterialTheme.colorScheme.primary.copy(alpha = 0.5f)
+        3 -> MaterialTheme.colorScheme.primary.copy(alpha = 0.8f)
+        4 -> MaterialTheme.colorScheme.primary
+        else -> MaterialTheme.colorScheme.surfaceVariant
     }
-    
-    return weeks
 }

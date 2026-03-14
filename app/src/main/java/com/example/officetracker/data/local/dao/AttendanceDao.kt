@@ -44,8 +44,14 @@ interface AttendanceDao {
     @Query("SELECT * FROM daily_stats WHERE date >= :startDate AND date <= :endDate ORDER BY date ASC")
     fun getStatsRange(startDate: Long, endDate: Long): Flow<List<DailyStat>>
     
+    @Query("SELECT * FROM daily_stats WHERE date >= :startDate AND date <= :endDate ORDER BY date ASC")
+    suspend fun getStatsRangeSync(startDate: Long, endDate: Long): List<DailyStat>
+    
     @Query("SELECT SUM(cappedSeconds) FROM daily_stats WHERE date >= :startDate AND date <= :endDate")
     fun getTotalCappedSecondsRange(startDate: Long, endDate: Long): Flow<Long?>
+
+    @Query("SELECT COUNT(*) FROM daily_stats WHERE date >= :startDate AND date <= :endDate AND totalSeconds > 0")
+    fun countDaysWithAttendanceRange(startDate: Long, endDate: Long): Flow<Int>
 
     @Query("SELECT * FROM daily_stats ORDER BY date DESC")
     fun getAllDailyStats(): Flow<List<DailyStat>>
